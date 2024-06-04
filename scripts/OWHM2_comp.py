@@ -20,13 +20,17 @@ from conda_scripts import plot_help as ph
 # import plot_wet as pw
 from conda_scripts import  owhm
 
-def setup(folder, test_name):
+def setup(folder, test_name, note = None):
     if not os.path.exists(folder):
         os.mkdir(folder)
 
     p = os.path.join(folder, test_name)
     if not os.path.exists(p):
         os.mkdir(p)
+
+    if note is not None:
+        with open(os.path.join(p, 'note.txt'), 'w') as n:
+            n.write(note)
 
     return p
 
@@ -112,6 +116,41 @@ def plot_compare_q(folder_out, test, yearly_df_, owhm2_dfi, workspace):
 
     plt.savefig(os.path.join(folder_out, test, "q.png"), bbox_inches = 'tight')
 
+def plot_converge_issues(folder, owhm_folder, test_name, ):
+
+    hclose = pd.read_csv(os.path.join(owhm_folder, 'output', 'Conv_HCLOSE.txt'), sep='\s+')
+    rclose = pd.read_csv(os.path.join(owhm_folder, 'output', 'Conv_RCLOSE.txt'), sep='\s+')
+
+    hclose.loc[:,'i'] = hclose.loc[:,'ROW']-1
+    hclose.loc[:, 'j'] = hclose.loc[:, 'COL']-1
+    rclose.loc[:,'i'] = rclose.loc[:,'ROW']-1
+    rclose.loc[:, 'j'] = rclose.loc[:, 'COL']-1
+
+    _,mg, modgeom = conda_scripts.arich_functions.get_flopy_model_spatial_reference('son',return_shp = True)
+    hclose = hclose.groupby(['i', 'j']).sum().loc[:, ['CHNG_HEAD']].reset_index()
+    hclose = pd.merge(hclose, modgeom, on = ['i','j'])
+
+    hclose = gpd.GeoDataFrame(hclose, geometry='geometry', crs = 2226)
+    print(rclose.shape)
+    rclose = rclose.groupby(['i', 'j']).sum().loc[:, ['FLOW_RESIDUAL']].reset_index()
+    rclose = pd.merge(rclose, modgeom, on = ['i','j'])
+    rclose = gpd.GeoDataFrame(rclose, geometry='geometry', crs = 2226)
+    print(rclose.shape)
+
+
+    fig = plt.figure( figsize  = (8.5,11))
+    mm = conda_scripts.make_map.make_map('RCLOSE (flow-residual) issues')
+    ax = mm.plotloc(fig, locname='SON_MOD')
+    hclose.set_geometry(hclose.geometry.centroid).plot('CHNG_HEAD', ax = ax,legend = True, s = 50)
+    plt.savefig(os.path.join(folder, test_name, "converge_hclose.png"), bbox_inches='tight')
+
+    fig = plt.figure( figsize  = (8.5,11))
+    mm = conda_scripts.make_map.make_map('rclose (head-residual) issues')
+    ax = mm.plotloc(fig, locname='SON_MOD')
+    rclose.set_geometry(rclose.geometry.centroid).plot('FLOW_RESIDUAL', ax = ax,legend = True, s = 10)
+    plt.savefig(os.path.join(folder, test_name, "converge_rclose.png"), bbox_inches='tight')
+
+
 
 def plot_stacked_bar(folder, test_name, yearly, owhm):
     ''' plot total water budget for both models'''
@@ -165,11 +204,12 @@ def plot_head_map(workspace, testname, base):
         ax[n].set_axis_off()
         ax[n].contourf(hd[-1, n], vmax=1000, vmin=-200, levels=np.arange(-200, 1000, 50), cmap='jet', origin="upper")
 
+
     plt.savefig(os.path.join(folder, test_name, f"heads_{testname}.png"), bbox_inches='tight')
 
 
-def plot_hydros(workspace, testname, base):
-    ''' plot a grid hydrographs, makes same figure for old and new model. '''
+def plot_hydros(workspace, testname, base, folder):
+    ''' plot a grid of hydrographs, makes same figure for old and new model. '''
     ml = conda_scripts.sv_budget.load_sv_model.get_model(workspace=workspace)
     hds = flopy.utils.binaryfile.HeadFile(os.path.join(workspace, 'output', 'sv_model_grid_6layers.hds'))
     ii, jj = np.meshgrid(np.arange(ml.dis.ncol), np.arange(ml.nrow))
@@ -284,6 +324,7 @@ def plot_fb_details(folder, test_name, fb, raw, base):
 
 
 def __f(df):
+    '''helper function'''
     q = df.copy()
     q = q.unstack().loc[:, q.unstack().columns[q.unstack().sum().abs() > .05]].stack()
     q = q.query('FID<80').groupby(level=[0]).sum().drop(columns=['Q-tot-in', 'Q-tot-out', 'dlength'])
@@ -298,7 +339,8 @@ def __f(df):
     return q
 
 
-def plot_by_crop(workspace, testname):
+def plot_by_crop(folder, workspace, testname):
+    '''plot numerous plots from ByCrop. one for each output vaiable.'''
     path = os.path.join(workspace, 'output', "ByCrop.txt")
 
     byc = pd.read_csv(path, sep='\s+')
@@ -316,6 +358,7 @@ def plot_by_crop(workspace, testname):
 
 
 def comp_fb_details(folder, test_name, raw_base, raw_owhm):
+    '''compare individual terms in fb details'''
     q_base = __f(raw_base)
     q_ver = __f(raw_owhm)
 
@@ -413,16 +456,22 @@ if __name__ == "__main__":
     workspace = r'C:\GSP\sv\model\SV_mod_V2\master'
     owhm2 = r'C:\GSP\sv\model\SV_mod_V2_owhm2\master'
 
-    test_name = 'subcatv8_50percuzfPrecp_fieswi_fieswp_finf1pt0'
+    test_name = 'subcatv8_50percuzfPrecp_fieswi_fieswp_finf1pt0_nwt_ss'
+    note = '''subcat v8. 50percuzfPrecp_fieswi_fieswp_finf1pt0.\nincreased nwt maxiter to 1000, decreasd fluxtol to 500.\n
+    specific storage increased to 1e-6 where it was below.
+    '''
     folder = 'versions'
     hard_load = True
 
-    fold = setup(folder,test_name)
+    fold = setup(folder,test_name, note= note)
 
-    plot_by_crop(owhm2, test_name)
+    plot_converge_issues(folder, owhm2, test_name, )
 
-    plot_hydros(workspace, test_name, True)
-    plot_hydros(owhm2, test_name, False)
+    plot_by_crop(folder, owhm2, test_name)
+
+    plot_hydros(workspace, test_name, True, folder)
+    plot_hydros(owhm2, test_name, False, folder)
+    plot_head_map(workspace, test_name, False)
 
     dts = load_dts()
     cum_wy_base, incremental, yearly, error_inc,error_cum = load_bud(workspace, folder, test_name,
