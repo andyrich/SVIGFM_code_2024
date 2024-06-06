@@ -1,0 +1,5 @@
+subcat v8. 50percuzfPrecp_fieswi_fieswp_finf1pt0.
+increased nwt maxiter to 1000, decreasd fluxtol to 500.
+
+    specific storage increased to 1e-6 where it was below.
+    
