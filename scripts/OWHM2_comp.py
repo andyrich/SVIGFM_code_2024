@@ -456,9 +456,10 @@ if __name__ == "__main__":
     workspace = r'C:\GSP\sv\model\SV_mod_V2\master'
     owhm2 = r'C:\GSP\sv\model\SV_mod_V2_owhm2\master'
 
-    test_name = 'subcatv8_50percuzfPrecp_fieswi_fieswp_finf1pt0_nwt_ss'
+    test_name = 'subcatv8_50percuzfPrecp_fieswi_fieswp_finf1pt0_nwt_ss_redo_finfpet'
     note = '''subcat v8. 50percuzfPrecp_fieswi_fieswp_finf1pt0.\nincreased nwt maxiter to 1000, decreasd fluxtol to 500.\n
     specific storage increased to 1e-6 where it was below.
+    updated subcatchment extrapolation by adding elevation values to regression
     '''
     folder = 'versions'
     hard_load = True
