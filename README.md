@@ -21,11 +21,13 @@ farms with farm numbers >80 are the subcatchment farms
 + as many others as possible
 
 
-_number of parameters? likely >2,000_
+number of parameters? likely >2,000
 
+How?  
 `PESTPP-IES` 
-**https://github.com/pypest/pyemu**
-[article](https://www.sciencedirect.com/science/article/abs/pii/S1364815216305461?via%3Dihub).
+
+[pyemu](https://github.com/pypest/pyemu)  
+[publication](https://www.sciencedirect.com/science/article/abs/pii/S1364815216305461?via%3Dihub)
 
 ## uncertainty analysis as part of calibration
  parameter and data worth analyses
