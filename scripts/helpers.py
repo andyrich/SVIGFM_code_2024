@@ -3,6 +3,60 @@ from flopy.discretization.structuredgrid import StructuredGrid
 import numpy as np
 import pyemu
 
+from pyemu.pst.pst_utils import (
+    SFMT,
+    IFMT,
+    FFMT,
+    pst_config,
+    parse_tpl_file,
+    try_process_output_file,
+)
+
+
+def modflow_hob_to_instruction_file(hob_file, ins_file=None):
+    """write an instruction file for a modflow head observation file
+
+    Args:
+        hob_file (`str`): the path and name of the existing modflow hob file
+        ins_file (`str`, optional): the name of the instruction file to write.
+            If `None`, `hob_file` +".ins" is used.  Default is `None`.
+
+    Returns:
+        **pandas.DataFrame**: a dataFrame with control file observation information
+
+    """
+
+    hob_df = pd.read_csv(
+        hob_file,
+        sep=r"\s+",
+        skiprows=1,
+        header=None,
+        names=["simval", "obsval", "obsnme", "date",'decimal_year'],
+    )
+
+    hob_df.loc[:, "obsnme"] = hob_df.obsnme.apply(str.lower)
+    hob_df.loc[:, "ins_line"] = hob_df.obsnme.apply(lambda x: "l1 !{0:s}!".format(x))
+    hob_df.loc[0, "ins_line"] = hob_df.loc[0, "ins_line"].replace("l1", "l2")
+
+    if ins_file is None:
+        ins_file = hob_file + ".ins"
+    f_ins = open(ins_file, "w")
+    f_ins.write("pif ~\n")
+    f_ins.write(
+        hob_df.loc[:, ["ins_line"]].to_string(
+            col_space=0,
+            columns=["ins_line"],
+            header=False,
+            index=False,
+            formatters=[SFMT],
+        )
+        + "\n"
+    )
+    hob_df.loc[:, "weight"] = 1.0
+    hob_df.loc[:, "obgnme"] = "obgnme"
+    f_ins.close()
+    return hob_df
+
 def get_sr():
     delr, delc = np.ones((85)) * 500, np.ones((275)) * 500
     xul = 6382956.489134505
