@@ -10,3 +10,14 @@ station locations, well perforations, well use, and other info.
 
 ## wl.csv
 the waterlevel data. join with the pars.csv
+
+
+## quality codes:
+| Key | Code      | Description                            |
+|-----|-----------|----------------------------------------|
+| 0   | Excellent | Quality control data (Excellent)       |
+| 40  | Good      | Quality control data (Good)            |
+| 80  | Fair      | Quality control data (Fair)            |
+| 120 | Suspect   | Quality control data (Suspect)         |
+| 160 | Poor      | Quality control data (Poor)            |
+| 200 | Unknown   | Quality control data (Unchecked)       |
