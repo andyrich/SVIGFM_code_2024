@@ -28,6 +28,4 @@ How?
 
 [pyemu](https://github.com/pypest/pyemu)  
 [publication](https://www.sciencedirect.com/science/article/abs/pii/S1364815216305461?via%3Dihub)
-
-## uncertainty analysis as part of calibration
- parameter and data worth analyses
+[Model Repo](https://github.com/andyrich/SVIGFM_model)
