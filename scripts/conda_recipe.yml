@@ -1,0 +1,12 @@
+name: shreddy2
+channels:
+- conda-forge
+dependencies:
+- python=3.9
+- pyemu
+- numpy<2.0
+- flopy
+- matplotlib
+- pyshp
+- scipy
+- shapely
