@@ -2,6 +2,23 @@ import flopy
 from flopy.discretization.structuredgrid import StructuredGrid
 import numpy as np
 import pyemu
+from shapely.geometry import Point
+from matplotlib.gridspec import GridSpec
+from conda_scripts import sv_budget
+import matplotlib.pyplot as plt
+
+
+
+import os
+import pandas as pd
+
+import matplotlib.pyplot as plt
+import conda_scripts.plot_help as ph
+
+import matplotlib as mpl
+
+import flopy
+import geopandas as gpd
 
 from pyemu.pst.pst_utils import (
     SFMT,
@@ -75,6 +92,36 @@ def get_sr():
     return sr
     
 
+def make_plot(name,x,y, i=None, j=None, geom = None):
+    '''make a hydrograph plot'''
+    
+    fig = plt.figure(figsize = (10,6))
+
+    gs1 = GridSpec(1, 2, left=0.05, right=0.48, wspace=0.05,width_ratios=[7, 2],)
+    ax = fig.add_subplot(gs1[0, :-1])
+
+    ax.set_title(f'{name}\n\nSVIGFM V2 Simulated Head')  
+    ph.baseline(ax,hard = True,yearstart = 1965)
+
+    
+    ax.tick_params(labelbottom=True, labelleft=True)
+    ax.set_ylabel('Hydraulic Head (feet)')
+    ax.grid(True)
+    ax3 = fig.add_subplot(gs1[-1, -1])
+    ax3.tick_params(labelbottom=False, labelleft=False)
+    sv_budget.sv_budget.sv_mod_map(simple = True,ax = ax3)
+    annotations = [child for child in ax3.get_children() if isinstance(child, mpl.text.Text)]
+    annotations[0].remove()
+    ax3.legend().remove()
+
+    if i is not None:
+        pt = geom.query(f"i=={i} and j =={j}").geometry.centroid
+    else:
+        pt = gpd.GeoSeries(Point(x, y), crs = 2226)   
+        
+    pt.plot(ax = ax3,  markersize = 40,marker = '*', color = 'r') 
+    return fig, ax
+    
 def offset(xul, yul, delr, delc, angrot=0):
     '''
     convert upper left x and y to lower lower left x/y for model grid creatcion

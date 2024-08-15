@@ -4,7 +4,7 @@ import pandas as pd
 import pyemu
 import multiprocessing as mp
 import shutil
-
+import flopy
 
 def read_drain(folder):
     # Step 1: Open the text file and read lines
@@ -128,6 +128,71 @@ def delete_all_files_in_directory(directory_path):
 
     print(f"\nAll files in the directory {directory_path} have been deleted.\n")
 
+def load_hydobs(workspace):
+    '''creating super large file of heads observations'''
+    out = flopy.utils.HydmodObs(os.path.join(workspace, 'output', 'SV_hyd.hyd'),)
+    out = out.get_dataframe(start_datetime='12/1/1969')
+    out = out.rename(columns = lambda x: x[6:]  if len(x)>12 else x)
+    out = out.drop(columns = 'totim')
+
+    out = out.reindex(pd.date_range('1975-01-01', freq = 'MS', periods = 525))
+
+    return out
+
+def create_diff_for_hydobs(df, numper_diff = 5):
+    '''will take the drawdown of very (numper_diff) nth measurement (the zeroth and every numper_diff will be used as drawdown head)'''
+    df = df.apply(calculate_differences, n=numper_diff)
+
+    return df
+
+def down_sample_hydobs(df, numper_diff = 5,keep_every = 4):
+    "remove numper_diff measurements. then it will keep keep_every nth value"
+    df = df.drop(df.iloc[::numper_diff, :].index)
+    df = df.iloc[::keep_every, :]
+
+    return df
+
+def create_obs_from_hyd(sim):
+    '''converting super large file of heads observations from wide to long to be loaded via pestpp'''
+    sim = sim.stack()
+    sim.index = sim.index.set_names([ 'date','Station',])
+    sim = sim.swaplevel().to_frame('meas').reset_index()
+
+    return sim
+
+
+def calculate_differences(series, n):
+    '''function to create differences at every n for the hydmobs datasets'''
+    differences = []
+    for i in range(0, len(series), n):
+        chunk = series[i:i+n]
+        first_value = chunk[0]
+        diff = [value - first_value for value in chunk]
+        differences.extend(diff)
+    return differences
+
+def run_all_hyd_obs(workspace):
+    bigobj = load_hydobs(workspace)
+    abs_small = down_sample_hydobs(bigobj, numper_diff = 5,keep_every = 4)
+    abs_obs = create_obs_from_hyd(abs_small)
+
+    print(f'there are {abs_obs.shape[0]} observations in the GWLE observation absolute elev file')
+
+    diff_big = create_diff_for_hydobs(bigobj, numper_diff = 5)
+    diff_small = down_sample_hydobs(diff_big, numper_diff = 5,keep_every = 4)
+    diff_obs = create_obs_from_hyd(diff_small)
+
+    print(f'there are {diff_obs.shape[0]} observations in the GWLE observation drawdown elev file')
+    
+    f_abs = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_asbolute_mod_heads.csv'))
+    print(f"writing absolute heads to {f_abs}")
+    f_diff = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_drawdown_mod_heads.csv'))
+    print(f"writing drawdon heads to {f_diff}")
+
+    abs_obs.to_csv(f_abs)
+    diff_obs.to_csv(f_diff)
+
+    print("Done writing to files")
 
 if __name__ == '__main__':
     mp.freeze_support()
@@ -153,3 +218,5 @@ if __name__ == '__main__':
 
     _ = sfr_flows_log_transform(os.path.join(foldr, 'output', "agua_caliente_sfr.dat"),
                                 os.path.join(foldr, 'output', "agua_caliente_sfr_reformat.csv"))
+
+    run_all_hyd_obs(foldr)
