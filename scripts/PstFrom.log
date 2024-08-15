@@ -1,0 +1,87 @@
+2024-08-12 16:24:48.534817 starting: opening PstFrom.log for logging
+2024-08-12 16:24:48.534817 starting PstFrom process
+2024-08-12 16:24:48.534817 starting: setting up dirs
+2024-08-12 16:24:48.538818 starting: copying original_d 'local_copy' to new_d 'pestaws_V2'
+2024-08-12 16:25:43.553147 finished: copying original_d 'local_copy' to new_d 'pestaws_V2' took: 0:00:55.014329
+2024-08-12 16:25:43.554169 finished: setting up dirs took: 0:00:55.019352
+2024-08-12 16:25:43.658073 starting: adding observations from tabular output file '['output\\Budget_pest_summary.txt']'
+2024-08-12 16:25:43.658073 starting: reading list-style file: pestaws_V2\output\Budget_pest_summary.txt
+2024-08-12 16:25:43.667723 finished: reading list-style file: pestaws_V2\output\Budget_pest_summary.txt took: 0:00:00.009650
+2024-08-12 16:25:43.668721 starting: building insfile for tabular output file output\Budget_pest_summary.txt
+2024-08-12 16:25:43.679654 finished: building insfile for tabular output file output\Budget_pest_summary.txt took: 0:00:00.010933
+2024-08-12 16:25:43.679654 starting: adding observation from instruction file 'pestaws_V2\output\Budget_pest_summary.txt.ins'
+2024-08-12 16:25:43.698009 finished: adding observation from instruction file 'pestaws_V2\output\Budget_pest_summary.txt.ins' took: 0:00:00.018355
+2024-08-12 16:25:43.698406 finished: adding observations from tabular output file '['output\\Budget_pest_summary.txt']' took: 0:00:00.040333
+2024-08-12 16:25:43.698406 starting: adding observations from output file output\Budget_pest_summary.txt
+2024-08-12 16:26:19.694099 starting: adding observations from tabular output file '['output\\Budget_pest.txt']'
+2024-08-12 16:26:19.694099 starting: reading list-style file: pestaws_V2\output\Budget_pest.txt
+2024-08-12 16:26:19.698098 finished: reading list-style file: pestaws_V2\output\Budget_pest.txt took: 0:00:00.003999
+2024-08-12 16:26:19.702097 starting: building insfile for tabular output file output\Budget_pest.txt
+2024-08-12 16:26:19.710131 finished: building insfile for tabular output file output\Budget_pest.txt took: 0:00:00.008034
+2024-08-12 16:26:19.710131 starting: adding observation from instruction file 'pestaws_V2\output\Budget_pest.txt.ins'
+2024-08-12 16:26:19.738119 finished: adding observation from instruction file 'pestaws_V2\output\Budget_pest.txt.ins' took: 0:00:00.027988
+2024-08-12 16:26:19.742137 finished: adding observations from tabular output file '['output\\Budget_pest.txt']' took: 0:00:00.048038
+2024-08-12 16:26:19.742137 starting: adding observations from output file output\Budget_pest.txt
+2024-08-12 16:26:34.707119 starting: adding observations from tabular output file '['output\\SV_HOBS_all._os']'
+2024-08-12 16:26:34.707119 starting: reading list-style file: pestaws_V2\output\SV_HOBS_all._os
+2024-08-12 16:26:34.736042 finished: reading list-style file: pestaws_V2\output\SV_HOBS_all._os took: 0:00:00.028923
+2024-08-12 16:26:34.867716 starting: building insfile for tabular output file output\SV_HOBS_all._os
+2024-08-12 16:26:34.903594 finished: building insfile for tabular output file output\SV_HOBS_all._os took: 0:00:00.035878
+2024-08-12 16:26:34.903594 starting: adding observation from instruction file 'pestaws_V2\output\SV_HOBS_all._os.ins'
+2024-08-12 16:26:34.977432 finished: adding observation from instruction file 'pestaws_V2\output\SV_HOBS_all._os.ins' took: 0:00:00.073838
+2024-08-12 16:26:34.979424 finished: adding observations from tabular output file '['output\\SV_HOBS_all._os']' took: 0:00:00.272305
+2024-08-12 16:26:34.979424 starting: adding observations from output file output\SV_HOBS_all._os
+2024-08-12 16:26:45.973236 starting: adding observations from tabular output file '['output\\kenwood_sfr_reformat_log.csv']'
+2024-08-12 16:26:45.974234 starting: reading list-style file: pestaws_V2\output\kenwood_sfr_reformat_log.csv
+2024-08-12 16:26:45.981215 finished: reading list-style file: pestaws_V2\output\kenwood_sfr_reformat_log.csv took: 0:00:00.006981
+2024-08-12 16:26:45.985204 starting: building insfile for tabular output file output\kenwood_sfr_reformat_log.csv
+2024-08-12 16:26:45.997173 finished: building insfile for tabular output file output\kenwood_sfr_reformat_log.csv took: 0:00:00.011969
+2024-08-12 16:26:45.997173 starting: adding observation from instruction file 'pestaws_V2\output\kenwood_sfr_reformat_log.csv.ins'
+2024-08-12 16:26:46.034075 finished: adding observation from instruction file 'pestaws_V2\output\kenwood_sfr_reformat_log.csv.ins' took: 0:00:00.036902
+2024-08-12 16:26:46.035073 finished: adding observations from tabular output file '['output\\kenwood_sfr_reformat_log.csv']' took: 0:00:00.061837
+2024-08-12 16:26:46.035073 starting: adding observations from output file output\kenwood_sfr_reformat_log.csv
+2024-08-12 16:26:46.036069 starting: adding observations from tabular output file '['output\\agua_caliente_sfr_reformat_log.csv']'
+2024-08-12 16:26:46.036069 starting: reading list-style file: pestaws_V2\output\agua_caliente_sfr_reformat_log.csv
+2024-08-12 16:26:46.042054 finished: reading list-style file: pestaws_V2\output\agua_caliente_sfr_reformat_log.csv took: 0:00:00.005985
+2024-08-12 16:26:46.044047 starting: building insfile for tabular output file output\agua_caliente_sfr_reformat_log.csv
+2024-08-12 16:26:46.056016 finished: building insfile for tabular output file output\agua_caliente_sfr_reformat_log.csv took: 0:00:00.011969
+2024-08-12 16:26:46.056016 starting: adding observation from instruction file 'pestaws_V2\output\agua_caliente_sfr_reformat_log.csv.ins'
+2024-08-12 16:26:46.092918 finished: adding observation from instruction file 'pestaws_V2\output\agua_caliente_sfr_reformat_log.csv.ins' took: 0:00:00.036902
+2024-08-12 16:26:46.093915 finished: adding observations from tabular output file '['output\\agua_caliente_sfr_reformat_log.csv']' took: 0:00:00.057846
+2024-08-12 16:26:46.093915 starting: adding observations from output file output\agua_caliente_sfr_reformat_log.csv
+2024-08-12 16:27:08.944871 starting: adding observations from tabular output file '['output\\kenwood_sfr_reformat.csv']'
+2024-08-12 16:27:08.945870 starting: reading list-style file: pestaws_V2\output\kenwood_sfr_reformat.csv
+2024-08-12 16:27:08.948893 finished: reading list-style file: pestaws_V2\output\kenwood_sfr_reformat.csv took: 0:00:00.003023
+2024-08-12 16:27:08.951853 starting: building insfile for tabular output file output\kenwood_sfr_reformat.csv
+2024-08-12 16:27:08.962860 finished: building insfile for tabular output file output\kenwood_sfr_reformat.csv took: 0:00:00.011007
+2024-08-12 16:27:08.962860 starting: adding observation from instruction file 'pestaws_V2\output\kenwood_sfr_reformat.csv.ins'
+2024-08-12 16:27:08.994738 finished: adding observation from instruction file 'pestaws_V2\output\kenwood_sfr_reformat.csv.ins' took: 0:00:00.031878
+2024-08-12 16:27:08.996733 finished: adding observations from tabular output file '['output\\kenwood_sfr_reformat.csv']' took: 0:00:00.051862
+2024-08-12 16:27:08.996733 starting: adding observations from output file output\kenwood_sfr_reformat.csv
+2024-08-12 16:27:08.996733 starting: adding observations from tabular output file '['output\\agua_caliente_sfr_reformat.csv']'
+2024-08-12 16:27:08.996733 starting: reading list-style file: pestaws_V2\output\agua_caliente_sfr_reformat.csv
+2024-08-12 16:27:09.000756 finished: reading list-style file: pestaws_V2\output\agua_caliente_sfr_reformat.csv took: 0:00:00.004023
+2024-08-12 16:27:09.002749 starting: building insfile for tabular output file output\agua_caliente_sfr_reformat.csv
+2024-08-12 16:27:09.013721 finished: building insfile for tabular output file output\agua_caliente_sfr_reformat.csv took: 0:00:00.010972
+2024-08-12 16:27:09.013721 starting: adding observation from instruction file 'pestaws_V2\output\agua_caliente_sfr_reformat.csv.ins'
+2024-08-12 16:27:09.046600 finished: adding observation from instruction file 'pestaws_V2\output\agua_caliente_sfr_reformat.csv.ins' took: 0:00:00.032879
+2024-08-12 16:27:09.047597 finished: adding observations from tabular output file '['output\\agua_caliente_sfr_reformat.csv']' took: 0:00:00.050864
+2024-08-12 16:27:09.047597 starting: adding observations from output file output\agua_caliente_sfr_reformat.csv
+2024-08-12 16:31:33.132824 starting: adding observations from tabular output file '['GWLE_OBS\\gwle_asbolute_mod_heads.csv']'
+2024-08-12 16:31:33.132824 starting: reading list-style file: pestaws_V2\GWLE_OBS\gwle_asbolute_mod_heads.csv
+2024-08-12 16:31:33.152825 finished: reading list-style file: pestaws_V2\GWLE_OBS\gwle_asbolute_mod_heads.csv took: 0:00:00.020001
+2024-08-12 16:31:33.711014 starting: building insfile for tabular output file GWLE_OBS\gwle_asbolute_mod_heads.csv
+2024-08-12 16:31:33.890623 finished: building insfile for tabular output file GWLE_OBS\gwle_asbolute_mod_heads.csv took: 0:00:00.179609
+2024-08-12 16:31:33.890623 starting: adding observation from instruction file 'pestaws_V2\GWLE_OBS\gwle_asbolute_mod_heads.csv.ins'
+2024-08-12 16:31:34.488622 finished: adding observation from instruction file 'pestaws_V2\GWLE_OBS\gwle_asbolute_mod_heads.csv.ins' took: 0:00:00.597999
+2024-08-12 16:31:34.500622 finished: adding observations from tabular output file '['GWLE_OBS\\gwle_asbolute_mod_heads.csv']' took: 0:00:01.367798
+2024-08-12 16:31:34.500622 starting: adding observations from output file GWLE_OBS\gwle_asbolute_mod_heads.csv
+2024-08-12 16:35:21.898289 starting: adding observations from tabular output file '['GWLE_OBS\\gwle_drawdown_mod_heads.csv']'
+2024-08-12 16:35:21.898289 starting: reading list-style file: pestaws_V2\GWLE_OBS\gwle_drawdown_mod_heads.csv
+2024-08-12 16:35:21.919233 finished: reading list-style file: pestaws_V2\GWLE_OBS\gwle_drawdown_mod_heads.csv took: 0:00:00.020944
+2024-08-12 16:35:22.474782 starting: building insfile for tabular output file GWLE_OBS\gwle_drawdown_mod_heads.csv
+2024-08-12 16:35:22.653273 finished: building insfile for tabular output file GWLE_OBS\gwle_drawdown_mod_heads.csv took: 0:00:00.178491
+2024-08-12 16:35:22.654270 starting: adding observation from instruction file 'pestaws_V2\GWLE_OBS\gwle_drawdown_mod_heads.csv.ins'
+2024-08-12 16:35:23.247687 finished: adding observation from instruction file 'pestaws_V2\GWLE_OBS\gwle_drawdown_mod_heads.csv.ins' took: 0:00:00.593417
+2024-08-12 16:35:23.259691 finished: adding observations from tabular output file '['GWLE_OBS\\gwle_drawdown_mod_heads.csv']' took: 0:00:01.361402
+2024-08-12 16:35:23.259691 starting: adding observations from output file GWLE_OBS\gwle_drawdown_mod_heads.csv
