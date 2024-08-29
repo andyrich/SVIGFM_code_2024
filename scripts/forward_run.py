@@ -83,7 +83,7 @@ def summarize_budget(folder):
     bud = bud.groupby(pd.to_datetime(bud.DATE_START).dt.year).sum()
 
     bud = bud.loc[:, ['STORAGE_IN', 'STORAGE_OUT',
-                      'WEL_V1_OUT', 'GHB_IN', 'RCH_IN', 'DRT_OUT', 'SFR_IN', 'SFR_OUT',
+                      'RURWELLS_OUT', "MNIWELLS_OUT", 'GHB_IN', 'RCH_IN', 'DRT_OUT', 'SFR_IN', 'SFR_OUT',
                       'MNW2_IN', 'MNW2_OUT', 'FMP_WELLS_OUT', 'FMP_FNR_IN', 'FMP_FNR_OUT',
                       'IN_OUT', 'PERCENT_ERROR'], ]
 
