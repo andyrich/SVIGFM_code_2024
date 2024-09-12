@@ -154,6 +154,7 @@ with open(export_file, 'w') as file:
 #print dataset 3
     print("PRINTING LAYERING AND OBSERVATION INFO")
     for well in HOB_Database['station_name'].unique():
+        assert len(well)<=12, f'well name is too long {well}'
         print("               "+ str(well))
         df=HOB_Database[HOB_Database['station_name']==well]
         NumLayers=df.iloc[0]['NumAssignedLayers']
@@ -184,7 +185,7 @@ with open(export_file, 'w') as file:
             else:
                 print("ERROR! LAYER NOT DEFINED FOR "+ str(well))
                 print("    this shouldn't happen. check your layering inputs")
-            file.write(f"{well} {layer} {row} {col} {NumObs} {FirstTOFF} {ROFF} {COFF} {FirstMeasurmentInHead} \n")
+            file.write(f"{well}  {layer} {row} {col} {NumObs} {FirstTOFF} {ROFF} {COFF} {FirstMeasurmentInHead} \n")
         file.write(ITTLine + '\n')
         
         # print observations for this well
@@ -194,7 +195,7 @@ with open(export_file, 'w') as file:
             TOFF=entry.TOFFSET
             head=entry.Value
             date=entry.Timestamp.strftime('%m/%d/%Y')
-            file.write(f"     {ID} {sp} {TOFF} {head} {date} \n")            
+            file.write(f"     {well}  {sp} {TOFF} {head} {date} \n")
             
 # Can QC using flopy if you'd like. as an example:
 m = flopy.modflow.Modflow()
