@@ -32,13 +32,16 @@ Created on Wed Sep  4 22:54:02 2024
         Added functionality to screen for dates (on top of existing functionality that screens for TOFF  >31 )
         Added optional Y/N functionality to average observations by stress period. 
 """
+import os
+import flopy
+print(os.getcwd())
 #===================================USER INPUTS==============================
-export_file=r'Q:\Work_Files\9400_Sonoma\2024UpdateExpandGridOWHM2\AnalyzeHOB\BuildHOB\Output\HOB20250910.hob' #where to print HOB
-WellListFile=r'Q:\Work_Files\9400_Sonoma\2024UpdateExpandGridOWHM2\AnalyzeHOB\BuildHOB\WellDetails_20240828_pw.xlsx' #File with WellName, Row, Col, X,Y, and percentage layering
-CentroidsFile=r'Q:\Work_Files\9400_Sonoma\2024UpdateExpandGridOWHM2\AnalyzeHOB\BuildHOB\Centroids.csv' #file with row , col, rowcol, centroidX, CentroidY
-ObservationsFile=r'Q:\Work_Files\9400_Sonoma\2024UpdateExpandGridOWHM2\AnalyzeHOB\BuildHOB\WaterLevelsForHOB.csv' # file with observations 'value' and date.
+export_file=r'HOB20250910.hob' #where to print HOB
+WellListFile=r'WellDetails_20240911.xlsx' #File with WellName, Row, Col, X,Y, and percentage layering
+CentroidsFile=r'Centroids.csv' #file with row , col, rowcol, centroidX, CentroidY
+ObservationsFile=r'WaterLevelsForHOB.csv' # file with observations 'value' and date.
 AverageObservationsBySP='Y' # Y/N for whether to average the observations by SP (month). 
-StressPeriodFile=r'Q:\Work_Files\9400_Sonoma\2024UpdateExpandGridOWHM2\AnalyzeHOB\BuildHOB\SP_Date_Lookup_SVIGFM_Hist.xlsx' # file with stress periods and date
+StressPeriodFile=r'SP_Date_Lookup_SVIGFM_Hist.xlsx' # file with stress periods and date
 Start= '1969-12-01' # first date that you want to include in the HOB (start date) format = YYYY-MM-DD
 End= '2018-09-30'  # last date that you want to include in the HOB (end date)format = YYYY-MM-DD
 HOBDRY=-9999 # dry well value 
@@ -128,8 +131,18 @@ HOB_Database = HOB_Database.sort_values(by=['station_name', 'Timestamp'])
 # Create a unique ID based on the station name and a running count of observations
 HOB_Database['unique_id'] = HOB_Database.groupby('station_name').cumcount() + 1
 HOB_Database['unique_id'] = HOB_Database['station_name'] + '_' + HOB_Database['unique_id'].astype(str)
-
+import os
+print(os.getcwd())
 #==================================ASSEMBLE HOB========================
+
+# Assuming you have a DataFrame df with columns Layer_1 to Layer_6
+columns = ['Layer_1', 'Layer_2', 'Layer_3', 'Layer_4', 'Layer_5', 'Layer_6']
+
+# Step 1: Sum the values across the specified columns by row
+row_sums = HOB_Database[columns].sum(axis=1)
+
+# Step 2: Divide each row by its corresponding row sum
+HOB_Database[columns] = HOB_Database[columns].div(row_sums, axis=0)
 
 # print dataset 1 and 2 (header)
 with open(export_file, 'w') as file:
@@ -161,7 +174,7 @@ with open(export_file, 'w') as file:
             for i in range(1, MAXM+1):  # Assuming 6 layers
                 if ExampleLine[f'Layer_{i}'] > 0:
                     layers.append((i, ExampleLine[f'Layer_{i}']))
-            multilayer_string = " ".join(f"{layer} {percentage:.3f}" for layer, percentage in layers)
+            multilayer_string = " ".join(f"{layer} {percentage:.16f}" for layer, percentage in layers)
             file.write('   '+multilayer_string + '    MLAY(1), PR(1), MLAY(2), PR(2), ..., MLAY(|LAYER|), PR(|LAYER|)'+ '\n')
         else:
             print("               "+"     (single layer well)")
@@ -183,9 +196,9 @@ with open(export_file, 'w') as file:
             date=entry.Timestamp.strftime('%m/%d/%Y')
             file.write(f"     {ID} {sp} {TOFF} {head} {date} \n")            
             
-#Can QC using flopy if you'd like. as an example: 
-#m = flopy.modflow.Modflow()
-#hobs = flopy.modflow.ModflowHob.load('test.hob', m)
+# Can QC using flopy if you'd like. as an example:
+m = flopy.modflow.Modflow()
+hobs = flopy.modflow.ModflowHob.load(export_file, m)
             
 FinishedBeep()
 
