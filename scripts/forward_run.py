@@ -494,6 +494,103 @@ def get_zone_bud(workspace):
     zb_df.to_csv(out_file)
 
 
+def crop_irr_depth(workspace):
+    '''
+    calculate crop irr depth
+    '''
+
+    infile = os.path.join(workspace, 'output', "ByCrop.txt")
+    outfile = os.path.join(workspace, 'output', "ByCrop_IRR_DEPTH_PEST.txt")
+    fb = pd.read_csv(infile, sep='\s+')
+
+    fb.loc[:, ['CU_INI', 'CU', 'CIR_INI', 'CIR', 'DEMAND_INI', 'DEMAND',
+               'ADDED_DEMAND_INI', 'ADDED_DEMAND', 'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+               'ADDED_DMD_DPERC', 'ADDED_DMD_RUNOFF', 'TRAN_POT', 'ANOXIA_LOSS',
+               'SOIL_STRESS_LOSS', 'TRAN', 'TRAN_SURF_INI', 'TRAN_SURF', 'TRAN_IRR',
+               'TRAN_PRECIP', 'TRAN_GW', 'EVAP_IRR', 'EVAP_PRECIP', 'EVAP_GW', ]] = fb.loc[:,
+                                                                                    ['CU_INI', 'CU', 'CIR_INI', 'CIR',
+                                                                                     'DEMAND_INI', 'DEMAND',
+                                                                                     'ADDED_DEMAND_INI', 'ADDED_DEMAND',
+                                                                                     'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+                                                                                     'ADDED_DMD_DPERC',
+                                                                                     'ADDED_DMD_RUNOFF', 'TRAN_POT',
+                                                                                     'ANOXIA_LOSS',
+                                                                                     'SOIL_STRESS_LOSS', 'TRAN',
+                                                                                     'TRAN_SURF_INI', 'TRAN_SURF',
+                                                                                     'TRAN_IRR',
+                                                                                     'TRAN_PRECIP', 'TRAN_GW',
+                                                                                     'EVAP_IRR', 'EVAP_PRECIP',
+                                                                                     'EVAP_GW', ]].mul(
+        fb.loc[:, 'DELT'], axis=0).div(fb.loc[:, 'IRRIGATED_AREA'], axis=0)
+
+    fb.loc[:, 'DATE_START'] = pd.to_datetime(fb.loc[:, 'DATE_START'])
+    fb = fb.groupby("DATE_START   	CROP_NAME".split()).sum().loc[:, ['DEMAND']].unstack(1)
+    fb.index = water_year(fb.index)
+    fb = fb.groupby(level=0).sum()
+    fb.index = pd.to_datetime(fb.index, format="%Y")
+    fb = fb.droplevel(0, 1)
+    fb = fb.rename(columns=land_use_renamed)
+    fb.index.name = 'date'
+    fb.unstack().to_frame('term').to_csv(outfile)
+
+    return fb
+
+
+def total_irr_demand(workspace):
+    '''calculate total volumetric demand per year'''
+    infile = os.path.join(workspace, 'output', "ByCrop.txt")
+    outfile = os.path.join(workspace, 'output', "ByCrop_TOTAL_DEMAND_PEST.txt")
+    fb = pd.read_csv(infile, sep='\s+')
+
+    fb.loc[:, ['CU_INI', 'CU', 'CIR_INI', 'CIR', 'DEMAND_INI', 'DEMAND',
+               'ADDED_DEMAND_INI', 'ADDED_DEMAND', 'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+               'ADDED_DMD_DPERC', 'ADDED_DMD_RUNOFF', 'TRAN_POT', 'ANOXIA_LOSS',
+               'SOIL_STRESS_LOSS', 'TRAN', 'TRAN_SURF_INI', 'TRAN_SURF', 'TRAN_IRR',
+               'TRAN_PRECIP', 'TRAN_GW', 'EVAP_IRR', 'EVAP_PRECIP', 'EVAP_GW', ]] = fb.loc[:,
+                                                                                    ['CU_INI', 'CU', 'CIR_INI', 'CIR',
+                                                                                     'DEMAND_INI', 'DEMAND',
+                                                                                     'ADDED_DEMAND_INI', 'ADDED_DEMAND',
+                                                                                     'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+                                                                                     'ADDED_DMD_DPERC',
+                                                                                     'ADDED_DMD_RUNOFF', 'TRAN_POT',
+                                                                                     'ANOXIA_LOSS',
+                                                                                     'SOIL_STRESS_LOSS', 'TRAN',
+                                                                                     'TRAN_SURF_INI', 'TRAN_SURF',
+                                                                                     'TRAN_IRR',
+                                                                                     'TRAN_PRECIP', 'TRAN_GW',
+                                                                                     'EVAP_IRR', 'EVAP_PRECIP',
+                                                                                     'EVAP_GW', ]].mul(
+        fb.loc[:, 'DELT'], axis=0) / 43560
+
+    fb.loc[:, 'DATE_START'] = pd.to_datetime(fb.loc[:, 'DATE_START'])
+    fb = fb.groupby("DATE_START   	CROP_NAME".split()).sum().loc[:, ['DEMAND']].unstack(1)
+    fb.index = water_year(fb.index)
+    fb = fb.groupby(level=0).sum()
+    fb.index = pd.to_datetime(fb.index, format="%Y")
+    fb = fb.droplevel(0, 1)
+    fb.index.name = 'date'
+    fb = fb.rename(columns=land_use_renamed)
+    fb.unstack().to_frame('term').to_csv(outfile)
+
+    return fb
+
+land_use_renamed = {
+    "BARE_LAND": "BareLand",
+    "CITRUS_AND_SUBTROPIC": "CitrusSubtropic",
+    "DECIDUOUS_FRUITS_AND": "DeciduousFruits",
+    "FIELD_CROP": "FieldCrop",
+    "GRAIN_AND_HAY_CROPS": "GrainHayCrops",
+    "IDLE": "Idle",
+    "NATIVE_VEGETATION_RI": "NativeVegetation",
+    "PASTURE": "Pasture",
+    "SEMIAGRICULTURAL": "SemiAgricultural",
+    "SEMIPAVED": "SemiPaved",
+    "TRUCK_NURSERY_AND_BE": "TruckNursery",
+    "TURF": "Turf",
+    "VINEYARD": "Vineyard",
+    "WALNUTS": "Walnuts",
+    "WATER": "Water"
+}
 def water_year(date):
     '''
 	this returns an integer water year of the date
@@ -532,6 +629,11 @@ def post_process(folder):
 
     _ = sfr_flow_accum(folder, 'kenwood')
     _ = sfr_flow_accum(folder, 'aguacal')
+
+    get_zone_bud(folder)
+
+    total_irr_demand(folder)
+    crop_irr_depth(folder)
 
 
 if __name__ == '__main__':
