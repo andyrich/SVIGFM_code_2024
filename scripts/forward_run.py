@@ -44,7 +44,7 @@ def get_parbounds():
 
         rurfac = [.8,1.25,1.0],
 
-        laymult_drn_k = [10, 5000, 1200],
+        laymult_drn_k = [10, 50000, 5000],
         laymult_fmp_vk = [0.0001, .01, 0.001],
         ghbk = [0.0001, 10000, 1.4E-02],
         laymult_hk =[1e-5, 1000, 1.],
@@ -188,7 +188,7 @@ def write_OFE(folder):
 
     print(f'done writing OFE to {outfile}')
 
-def write_pilot_point(layer, prop, model_ws):
+def write_pilot_point(layer, prop, model_ws, skip_writing_output = False):
     if layer != 1:
         factors_file = os.path.join(model_ws, 'pp2024', "pp.fac")
     else:
@@ -216,23 +216,28 @@ def write_pilot_point(layer, prop, model_ws):
     assert mult.shape==lay.shape==hk_arr.shape, f"shapes are not equal\nmult.shape=={mult.shape}\nlay.shape=={lay.shape}\nhk_arr.shape=={hk_arr.shape}\n"
 
     out = hk_arr*mult*lay
-
+    
     #set parameter bounds
     bounds = get_bounds()[prop]
     out[out<bounds[0]] = bounds[0]
     out[out>bounds[1]] = bounds[1]
     #final values:
-    array_out = os.path.join(model_ws, 'pp2024_out', f"{prop}.txt")
-    np.savetxt(array_out, out)
+    if skip_writing_output:
+        print('not writing outputs for final arrays')
+    else:
+        array_out = os.path.join(model_ws, 'pp2024_out', f"{prop}.txt")
+        np.savetxt(array_out, out)
 
-def write_all_pp(model_ws):
+    return out, lay, mult, hk_arr
+
+def write_all_pp(model_ws, skip_writing_output = False):
     '''write outputs from pilots points, creating actual grid files'''
 
     prefix_dict = get_prefix_dict_for_pilot_points()
     
     for lay in prefix_dict.keys():
         for par in prefix_dict[lay]:
-            write_pilot_point(lay, par, model_ws)
+            write_pilot_point(lay, par, model_ws, skip_writing_output = skip_writing_output)
 
 
 def summarize_budget(folder):
@@ -323,10 +328,12 @@ def sfr_flow_accum(folder, station):
     #fix low values for modeled data
     c = flow.Flow < 0.001 * 60 * 60 * 24  # all flows below this threshold will be replaced to this value (USGS does not report below)
     flow.loc[c, 'Flow'] = 0.001 * 60 * 60 * 24  # ft^3/day
-
-
+    
+    print(f"here is the obs_flow\n{obs_flow.head()}\n")
+    print(f"here is the flow\n{flow.head()}\n")
+    print(f"size of flow before joining with dates\observed flow: \n{flow.shape}")
     flow = pd.merge(obs_flow, flow, left_on = 'date', right_on = 'Date')
-
+    print(f"size of flow after joining with dates\observed flow: \n{flow.shape}")
     
     
     fdf = {x:np.percentile(flow.Flow.values, x) for x in range(5,101,5)}
@@ -450,6 +457,56 @@ def run_all_hyd_obs(workspace):
     roll_obs.to_csv(f_roll)
 
     print("Done writing to files")
+
+
+def get_zone_bud( workspace ):
+    '''
+    process zone budget of sv modflow output
+    :param workspace:
+    :param zones_:
+    :param cbc:
+    :param sfr_path:
+    :param read_pickle:
+    :param SFR_basin:
+    :param historical:
+    :param pickle_str: string to add to end of pickle_name = zonebudget_output_{:}_{:}.pickle'.format(fut, pickle_str)
+    :return: zb_df, ml, divs
+    '''
+
+
+    start_datetime_df = '12/1/1969'
+    print(f'the start date time for the zone budget dataframe is {start_datetime_df}')
+
+    zones_2020 = np.ones([6, 275, 85], dtype=int)
+
+    for lay in np.arange(0, 6):
+        zones_2020[lay, :, :] = np.genfromtxt(os.path.join(workspace,'zbud',f'zonation_gwbasin_lay_{lay+1}.csv'),delimiter = ',') 
+
+    aliases = {1: 'Exterior', 2: 'Basin'}
+
+    cb_f = os.path.join(workspace, 'output', cbc)
+    cbb = bf.CellBudgetFile(cb_f, verbose=False)
+
+
+    start = time.time()
+
+    # allones = np.ones((ml.dis.nrow,ml.dis.ncol),dtype = int)
+    zb_whole = flopy.utils.ZoneBudget(cbb, zones_2020, aliases=aliases)
+    zb_df = zb_whole.get_dataframes(start_datetime=start_datetime_df, timeunit='D').multiply(1 / 43560.)
+
+    wy = conda_scripts.arich_functions.water_year(zb_df.index.get_level_values(0))
+    zb_df.loc[:, 'Water Year'] = pd.to_datetime(wy, format='%Y')
+    zb_df = zb_df.set_index('Water Year', append=True)
+    days = zb_df.index.get_level_values(0).daysinmonth
+    zb_df.loc[:, 'Days'] = days
+    zb_df = zb_df.multiply(zb_df.Days, axis='index')
+    zb_df.index = zb_df.index.droplevel(0)
+    zb_df = zb_df.groupby(['Water Year', 'name']).sum().loc[:, 'Basin'].unstack()
+
+    zb_df = zb_df.unstack().to_frame('term')
+
+    out_file = os.path.join(workspace, 'output', 'zbud.csv')
+    zb_df.to_csv(out_file)
 
 
 def post_process(folder):
