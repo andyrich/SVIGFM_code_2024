@@ -86,6 +86,37 @@ def get_bounds():
                   )
     return bounds
 
+def set_crop_depth_irr_obs(df):
+    # Sample data setup
+    irr_depth = {'BareLand': 0.0,
+                 'CitrusSubtropic': 2.5,
+                 'DeciduousFruits': 0.05,
+                 'FieldCrop': 2.0,
+                 'GrainHayCrops': 2.4,
+                 'Idle': 0.0,
+                 'NativeVegetation': 0.0,
+                 'Pasture': 2.0,
+                 'SemiAgricultural': 0.0,
+                 'SemiPaved': 0.0,
+                 'TruckNursery': 0.2,
+                 'Turf': 3,
+                 'Vineyard': 0.6,
+                 'Walnuts': 2.0,
+                 'Water': 0.0}
+
+    # Assuming df is your DataFrame and parnme is one of the columns
+    def update_obsval_weight(row, irr_depth):
+        for key in irr_depth:
+            if 'irrdepth' in row['parnme'] and key in row['parnme']:
+                row['obsval'] = irr_depth[key]
+                row['weight'] = 1.0
+                row['standard_deviation'] = 0.1
+        return row
+
+    # Apply the function to each row
+    df = df.apply(update_obsval_weight, axis=1, irr_depth=irr_depth)
+
+    return df
 
 def get_prefix_dict_for_pilot_points():
     prefix_dict = {0: ["hk1", 'ss1', "sy1", "vk1"],
@@ -130,6 +161,9 @@ def read_drain(folder):
     head2 = "{} {} 0 0\n{} {}\n".format(csv_data.shape[0], 50, csv_data.shape[0], 0)
 
     csv_data = csv_data.loc[:, ['lay', 'i', 'j', 'top', 'k', 'd', 'farm', 'd2', 'd3']]
+
+    #set all drains to layer 1
+    csv_data.loc[:,'lay'] = 1
 
     with open(os.path.join(folder, 'drt.drt'), 'w') as w:
         w.write(head)
@@ -233,6 +267,7 @@ def write_pilot_point(layer, prop, model_ws, skip_writing_output = False):
     array_out = os.path.join(model_ws, 'pp2024_out', f"{prop}.txt")
     np.savetxt(array_out, out)
 
+    return out, lay, mult, hk_arr
 
 def write_all_pp(model_ws, skip_writing_output = False):
     '''write outputs from pilots points, creating actual grid files'''
@@ -243,6 +278,31 @@ def write_all_pp(model_ws, skip_writing_output = False):
         for par in prefix_dict[lay]:
             write_pilot_point(lay, par, model_ws, skip_writing_output = skip_writing_output)
 
+
+def HK_extract(workspace):
+    '''extract K values from observed hk values from model'''
+
+    infile = os.path.join(workspace, 'hk_estimates', "hk_estimates_for_pest.xlsx")
+    outfile = os.path.join(workspace, 'hk_estimates', "hk_estimates_for_pest_simulated_K.csv")
+
+    obs_vals = pd.read_excel(infile, index_col=0)
+
+    hk = [np.genfromtxt(os.path.join(workspace, 'pp2024_out', f'hk{i}.txt')) for i in range(1, 7)]
+    hk = np.stack(hk)
+    print('extracting HK values from model\n')
+    for ind, row in obs_vals.iterrows():
+        laytop = int(row['laytop'])
+        laybot = int(row['laybot'])
+
+        avg = hk[slice(laytop, laybot + 1, 1), row['i'], row['j']]
+        obs_vals.loc[ind, 'hk_pest'] = np.mean(avg)
+
+        print(
+            f"wellname:{row['well']}\n\tlaytop - {laybot}, laybot-{laybot}\n\tlayer values:--\n\t\t{avg}\n\tactual value\n\t\t{np.mean(avg):.3g}\n")
+
+    obs_vals.to_csv(outfile)
+
+    return obs_vals
 
 def summarize_budget(folder):
     '''summarize the budget output terms for cleaner ingetion into pest processing'''
@@ -574,6 +634,7 @@ def total_irr_demand(workspace):
 
     return fb
 
+
 land_use_renamed = {
     "BARE_LAND": "BareLand",
     "CITRUS_AND_SUBTROPIC": "CitrusSubtropic",
@@ -616,6 +677,12 @@ def water_year(date):
 
 
 def post_process(folder):
+    get_zone_bud(folder)
+
+    total_irr_demand(folder)
+    crop_irr_depth(folder)
+    HK_extract(folder)
+
     summarize_budget(folder)
     _ = sfr_flows_log_transform(os.path.join(folder, 'output', "kenwood_sfr.dat"),
                                 os.path.join(folder, 'output', "kenwood_sfr_reformat.csv"),
@@ -630,10 +697,7 @@ def post_process(folder):
     _ = sfr_flow_accum(folder, 'kenwood')
     _ = sfr_flow_accum(folder, 'aguacal')
 
-    get_zone_bud(folder)
 
-    total_irr_demand(folder)
-    crop_irr_depth(folder)
 
 
 if __name__ == '__main__':
