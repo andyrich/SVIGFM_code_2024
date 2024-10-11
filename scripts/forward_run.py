@@ -8,9 +8,13 @@ import flopy
 import flopy.utils.binaryfile as bf
 from datetime import datetime
 
+print(f"loading forward_run.py from {os.getcwd()}")
+
 
 def get_zone_bounds():
-    '''multiplier bounds for pilot points and zones'''
+    '''
+    multiplier bounds for pilot points and zones
+    '''
     zone_bounds = dict(sy1=[0.1, 100],  # lo, hi
                        ss1=[0.001, 100],
                        ss2=[0.001, 100],
@@ -42,21 +46,21 @@ def get_parbounds():
                      fieswp=[0.5, 0.999, 0.7],
 
                      hfb=[0.000001, 1000, 1000],
-                     fmp_kc=[0.5, 2, 1.4],  # individual kc multipliers
-                     fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values
-                     fmp_sfac=[.5, 2, 1.4],
+                     fmp_kc=[1/1.3, 1., 1.0],  # individual kc multipliers
+                     fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values. vineyards are set in PEST.ipynb at 0.95
+                     fmp_sfac=[1/1.3, 1.3, 1.0], # multiplier for crop kc
 
                      rurfac=[.8, 1.25, 1.0],
 
-        laymult_drn_k = [10, 50000, 5000],
-        laymult_fmp_vk = [0.0001, .01, 0.001],
-        ghbk = [0.0001, 10000, 1.4E-02],
-        laymult_hk =[1e-5, 1000, 1.],
-        laymult_vk = [1e-3, 1e-1, 1.],
-        laymult_ss = [1e-6, 1e-3, 1.],
-        laymult_sy = [0.0001, 0.3, 1.]
-        ) # all sfac/kc multipliers
-    
+                     laymult_drn_k=[10, 50000, 5000],
+                     laymult_fmp_vk=[0.0001, .01, 0.001],
+                     ghbk=[0.0001, 10000, 1.4E-02],
+                     laymult_hk=[1e-5, 1000, 1.],
+                     laymult_vk=[1e-3, 1e-1, 1.],
+                     laymult_ss=[1e-6, 1e-3, 1.],
+                     laymult_sy=[0.0001, 0.3, 1.]
+                     )  # all sfac/kc multipliers
+
     return parbounds
 
 
@@ -86,13 +90,14 @@ def get_bounds():
                   )
     return bounds
 
+
 def set_crop_depth_irr_obs(df):
     # Sample data setup
     irr_depth = {'BareLand': 0.0,
                  'CitrusSubtropic': 2.5,
                  'DeciduousFruits': 0.05,
                  'FieldCrop': 2.0,
-                 'GrainHayCrops': 2.4,
+                 'GrainHayCrops': 5.0,
                  'Idle': 0.0,
                  'NativeVegetation': 0.0,
                  'Pasture': 2.0,
@@ -118,9 +123,10 @@ def set_crop_depth_irr_obs(df):
 
     return df
 
+
 def get_prefix_dict_for_pilot_points():
-    prefix_dict = {0: ["hk1", 'ss1', "sy1", "vk1"],
-                   1: ["hk2", "ss2", "vk2", 'fmp_vk', 'drn_k'],
+    prefix_dict = {0: ["hk1", 'ss1', "sy1", "vk1", 'fmp_vk', 'drn_k'],
+                   1: ["hk2", "ss2", "vk2" ],
                    2: ["hk3", "ss3", "vk3"],
                    3: ["hk4", "ss4", "vk4"],
                    4: ["hk5", "ss5", "vk5"],
@@ -148,6 +154,17 @@ def read_drain(folder):
     # vk = np.genfromtxt(g,delimiter = ',')
     vk = np.genfromtxt(g)
     csv_data.loc[:, 'k'] = vk[csv_data.loc[:, 'i'] - 1, csv_data.loc[:, 'j'] - 1]
+
+    # todo add drain locations for model arrays
+    g = os.path.join(folder, 'model_arrays', 'drain_locs.csv')
+    drain_off = np.genfromtxt(g, delimiter=',', dtype=int)
+    csv_data.loc[:, 'drain_off'] = 0
+    csv_data.loc[:, 'drain_off'] = drain_off[csv_data.loc[:, 'i'] - 1, csv_data.loc[:, 'j'] - 1]
+    c = csv_data.loc[:, 'drain_off'] == 0
+    csv_data.loc[c, 'k'] = 0.0
+
+    print(f"number of cells with >0 cond: {csv_data.query('k>0').shape[0]}")
+
     # Display the data read from CSV
 
     head = '''#Drain Returnflow
@@ -163,7 +180,7 @@ def read_drain(folder):
     csv_data = csv_data.loc[:, ['lay', 'i', 'j', 'top', 'k', 'd', 'farm', 'd2', 'd3']]
 
     #set all drains to layer 1
-    csv_data.loc[:,'lay'] = 1
+    csv_data.loc[:, 'lay'] = 1
 
     with open(os.path.join(folder, 'drt.drt'), 'w') as w:
         w.write(head)
@@ -230,8 +247,9 @@ def write_OFE(folder):
 
     print(f'done writing OFE to {outfile}')
 
-def write_pilot_point(layer, prop, model_ws, skip_writing_output = False):
-    if layer != 1:
+
+def write_pilot_point(layer, prop, model_ws, skip_writing_output=False):
+    if layer == 0:
         factors_file = os.path.join(model_ws, 'pp2024', "pp.fac")
     else:
         factors_file = os.path.join(model_ws, 'pp2024', "pp2.fac")
@@ -265,18 +283,22 @@ def write_pilot_point(layer, prop, model_ws, skip_writing_output = False):
     out[out > bounds[1]] = bounds[1]
     # final values:
     array_out = os.path.join(model_ws, 'pp2024_out', f"{prop}.txt")
-    np.savetxt(array_out, out)
+
+    if not skip_writing_output:
+        np.savetxt(array_out, out)
+        print(f"final array written to {array_out}")
 
     return out, lay, mult, hk_arr
 
-def write_all_pp(model_ws, skip_writing_output = False):
+
+def write_all_pp(model_ws, skip_writing_output=False):
     '''write outputs from pilots points, creating actual grid files'''
 
     prefix_dict = get_prefix_dict_for_pilot_points()
 
     for lay in prefix_dict.keys():
         for par in prefix_dict[lay]:
-            write_pilot_point(lay, par, model_ws, skip_writing_output = skip_writing_output)
+            write_pilot_point(lay, par, model_ws, skip_writing_output=skip_writing_output)
 
 
 def HK_extract(workspace):
@@ -303,6 +325,7 @@ def HK_extract(workspace):
     obs_vals.to_csv(outfile)
 
     return obs_vals
+
 
 def summarize_budget(folder):
     '''summarize the budget output terms for cleaner ingetion into pest processing'''
@@ -469,9 +492,15 @@ def calculate_differences(series, n):
     return differences
 
 
-def rolling_mean(df, nyears=10):
+def rolling_mean(df, nyears=10, nmonths = None):
     '''rolling mean of hydobs/and gwle data. dates are labeled as end of period. for 10-year it is past end of model, but just represents periods>2015-12-31'''
-    df = df.resample(f'{nyears}Y').mean()
+
+    if isinstance(nyears, int):
+        df = df.resample(f'{nyears}Y').mean()
+    elif isinstance(nmonths, int):
+        df = df.resample(f'{nmonths}M').mean()
+    else:
+        raise ValueError('nmonths and nyears are None')
 
     return df
 
@@ -493,16 +522,25 @@ def run_all_hyd_obs(workspace):
     roll = rolling_mean(bigobj, nyears=10)
     roll_obs = create_obs_from_hyd(roll)
 
+    #rolling 18month
+    roll_short = rolling_mean(bigobj, nyears=None, nmonths=18)
+    roll_short_obs = create_obs_from_hyd(roll_short)
+
     f_abs = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_asbolute_mod_heads.csv'))
+    f_abs_dup = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_asbolute_mod_heads_duplicate.csv'))
     print(f"writing absolute heads to {f_abs}")
     f_diff = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_drawdown_mod_heads.csv'))
     print(f"writing drawdon heads to {f_diff}")
     f_roll = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_rolling_mod_heads.csv'))
     print(f"writing rolling heads to {f_roll}")
+    f_roll_short = os.path.join(os.path.join(workspace, "GWLE_OBS", 'gwle_rolling_18month_mod_heads.csv'))
+    print(f"writing rolling heads to {f_roll}")
 
     abs_obs.to_csv(f_abs)
+    abs_obs.to_csv(f_abs_dup)
     diff_obs.to_csv(f_diff)
     roll_obs.to_csv(f_roll)
+    roll_short_obs.to_csv(f_roll_short)
 
     print("Done writing to files")
 
@@ -510,15 +548,6 @@ def run_all_hyd_obs(workspace):
 def get_zone_bud(workspace):
     '''
     process zone budget of sv modflow output
-    :param workspace:
-    :param zones_:
-    :param cbc:
-    :param sfr_path:
-    :param read_pickle:
-    :param SFR_basin:
-    :param historical:
-    :param pickle_str: string to add to end of pickle_name = zonebudget_output_{:}_{:}.pickle'.format(fut, pickle_str)
-    :return: zb_df, ml, divs
     '''
 
     start_datetime_df = '12/1/1969'
@@ -652,6 +681,8 @@ land_use_renamed = {
     "WALNUTS": "Walnuts",
     "WATER": "Water"
 }
+
+
 def water_year(date):
     '''
 	this returns an integer water year of the date
@@ -696,8 +727,6 @@ def post_process(folder):
 
     _ = sfr_flow_accum(folder, 'kenwood')
     _ = sfr_flow_accum(folder, 'aguacal')
-
-
 
 
 if __name__ == '__main__':
