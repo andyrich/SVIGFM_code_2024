@@ -492,18 +492,31 @@ def calculate_differences(series, n):
     return differences
 
 
-def rolling_mean(df, nyears=10, nmonths = None):
+def rolling_mean(df, nyears=None, nmonths=None):
     '''rolling mean of hydobs/and gwle data. dates are labeled as end of period. for 10-year it is past end of model, but just represents periods>2015-12-31'''
 
     if isinstance(nyears, int):
-        df = df.resample(f'{nyears}Y').mean()
+        window = 12 * nyears
     elif isinstance(nmonths, int):
-        df = df.resample(f'{nmonths}M').mean()
+        window = nmonths
     else:
         raise ValueError('nmonths and nyears are None')
 
-    return df
+    print(f"window: {window}")
+    c = (df.rolling(window, min_periods=1, ).count() == window).all(axis=1)
+    rn = df.rolling(window, min_periods=1, ).mean() #remove rows without window number of measurements
+    rn = rn.loc[c]
 
+    #now revers the index, take window freq measurements, then reverse, and filter the final
+    ind = rn.index
+    ind = ind[::-1][::window][::-1]
+    rn = rn.loc[ind]
+
+    return rn
+
+def limit_hyd_obs_date_range(df, end_of_model = '2018-09-30'):
+    df = df.loc[:end_of_model,:]
+    return df
 
 def run_all_hyd_obs(workspace):
     bigobj = load_hydobs(workspace)
@@ -519,7 +532,7 @@ def run_all_hyd_obs(workspace):
     print(f'there are {diff_obs.shape[0]} observations in the GWLE observation drawdown elev file')
 
     # rolling observations
-    roll = rolling_mean(bigobj, nyears=10)
+    roll = rolling_mean(bigobj, nyears=8,nmonths=None)
     roll_obs = create_obs_from_hyd(roll)
 
     #rolling 18month
@@ -554,6 +567,8 @@ def get_zone_bud(workspace):
     print(f'the start date time for the zone budget dataframe is {start_datetime_df}')
 
     zones_2020 = np.ones([6, 275, 85], dtype=int)
+
+    #todo fix zonation_gwbasin_lay_
 
     for lay in np.arange(0, 6):
         zones_2020[lay, :, :] = np.genfromtxt(os.path.join(workspace, 'zbud', f'zonation_gwbasin_lay_{lay + 1}.csv'),
