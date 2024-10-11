@@ -6,17 +6,12 @@ from shapely.geometry import Point
 from matplotlib.gridspec import GridSpec
 from conda_scripts import sv_budget
 import matplotlib.pyplot as plt
-
-
-
+import conda_scripts
 import os
 import pandas as pd
-
 import matplotlib.pyplot as plt
 import conda_scripts.plot_help as ph
-
 import matplotlib as mpl
-
 import flopy
 import geopandas as gpd
 
@@ -121,6 +116,48 @@ def make_plot(name,x,y, i=None, j=None, geom = None):
         
     pt.plot(ax = ax3,  markersize = 40,marker = '*', color = 'r') 
     return fig, ax
+
+def get_zones(ml):
+    from shapely import Polygon
+
+    z = np.genfromtxt(os.path.join(ml.model_ws, 'model_arrays', 'zonation_3.csv'), delimiter = ' ')
+    
+    zotther = z.copy()
+    zotther[zotther>8] = 0
+    
+    zones = {i:zotther  for i in range(7) }
+    zones[0] = z
+
+    
+    z = conda_scripts.arich_functions.array2rc(zones[1],'zone').astype({'zone':int,'row':int,'column':int})
+    
+    aliases = {1: 'Bay', 2: 'EastSide', 3: 'SouthCent', 4: 'Kenwood', 5: 'VOM', 6: 'AguaCal',7:'WestSide',8:'CitySon',9:'Highlands'}
+    z.loc[:,'name'] =z.loc[:,'zone'].replace(aliases)
+    z = z.query("zone!=0").loc[:,['row','column','zone','name']]
+
+    z.loc[:,'geometry'] = z.apply(lambda x: Polygon(ml.modelgrid.get_cell_vertices(x['row']-1, x['column']-1)), axis = 1)
+
+    z = gpd.GeoDataFrame(z, geometry = 'geometry', crs = 2226)
+    
+    return z
+
+def plot_zones(ml,zones = None, fig = None,ax = None, label = False):
+    if zones is None:
+        zones = get_zones(ml)
+    if fig is None:
+        fig = plt.figure(figsize = (6,8), dpi = 250)
+    if ax is None:
+        mm= conda_scripts.make_map.make_map('Zones')
+        ax = mm.plotloc(fig, locname = 'SON_MOD')
+        
+    zones.dissolve('name').reset_index().plot('name',  ax = ax, alpha = .5)
+    zones.dissolve('name').reset_index().exterior.plot( ax = ax, alpha = .5)
+
+    if label:
+        conda_scripts.plot_help.label_poly(zones.dissolve('name').reset_index(),ax, column = 'name')
+
+    return fig, ax
+    
     
 def offset(xul, yul, delr, delc, angrot=0):
     '''
