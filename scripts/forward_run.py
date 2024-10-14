@@ -11,6 +11,53 @@ from scipy.stats import hmean
 print(f"loading forward_run.py from {os.getcwd()}")
 
 
+
+def set_laymult_start_values(df):
+    '''set partrans and parval1 in the parameter data df'''
+
+    assert isinstance(df, pd.DataFrame)
+
+    parvals = dict(
+    laymult_drn_k = ['log',         33.6, 10, 50000,   ],
+    laymult_fmp_vk = ['log',   0.0008873, 0.0001, .01,   ],
+    laymult_hk1 = ['log', 5             , 1e-5, 1000,   ],
+    laymult_hk2 = ['log', 0.1           , 1e-5, 1000,   ],
+    laymult_hk3 = ['log', 0.1           , 1e-5, 1000,   ],
+    laymult_hk4 = ['log', 3             , 1e-5, 1000,   ],
+    laymult_hk5 = ['log', 2.0           , 1e-5, 1000,   ],
+    laymult_hk6 = ['log', 2.0           , 1e-5, 1000,   ],
+    laymult_ss1 = ['log', .05/200       ,  1e-6, 1e-3,  ],
+    laymult_ss2 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
+    laymult_ss3 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
+    laymult_ss4 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_ss5 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_ss6 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_sy1 = ['fixed', 0.3         ,  .005,    1,  ],
+    laymult_vk1 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk2 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk3 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk4 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk5 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk6 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+
+    # laymult_hk=[1e-5, 1000, 1.],
+    # laymult_vk=[1e-3, 1e-1, 1.],
+    # laymult_ss=[1e-6, 1e-3, 1.],
+    # laymult_sy=[0.0001, 0.3, 1.],
+    # laymult_drn_k=[10, 50000, 5000],
+    # laymult_fmp_vk=[0.0001, .01, 0.001],
+    )
+
+    print('Setting Parvals for those listed in set_laymult_start_values')
+    for k in parvals.keys():
+        c = df.loc[:, 'parnme'] == k
+        assert c.sum()==1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['partrans',  'parval1', 'parlbnd','parubnd']] = parvals[k]
+
+    print(df.loc[df.parnme.isin(list(parvals.keys())),['parnme','partrans',  'parval1', 'parlbnd','parubnd'] ])
+
+    return df
+
 def get_zone_bounds():
     '''
     multiplier bounds for pilot points and zones
@@ -49,16 +96,9 @@ def get_parbounds():
                      fmp_kc=[1/1.3, 1.3, 1.0],  # individual kc multipliers
                      fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values. vineyards are set in PEST.ipynb at 0.95
                      fmp_sfac=[1/1.3, 1.3, 1.0], # multiplier for crop kc
-
                      rurfac=[.8, 1.25, 1.0],
-
-                     laymult_drn_k=[10, 50000, 5000],
-                     laymult_fmp_vk=[0.0001, .01, 0.001],
                      ghbk=[0.0001, 10000, 1.4E-02],
-                     laymult_hk=[1e-5, 1000, 1.],
-                     laymult_vk=[1e-3, 1e-1, 1.],
-                     laymult_ss=[1e-6, 1e-3, 1.],
-                     laymult_sy=[0.0001, 0.3, 1.]
+
                      )  # all sfac/kc multipliers
 
     return parbounds
@@ -142,39 +182,6 @@ def get_prefix_dict_for_pilot_points():
     return prefix_dict
 
 
-def set_laymult_start_values(df):
-    '''set partrans and parval1 in the parameter data df'''
-
-    assert isinstance(df, pd.DataFrame)
-
-    parvals = dict(
-    laymult_drn_k = ['log', 33.6],
-    laymult_fmp_vk = ['log',   0.0008873],
-    laymult_hk1 = ['log', 5],
-    laymult_hk2 = ['log', 0.1],
-    laymult_hk3 = ['log', 0.1],
-    laymult_hk4 = ['log', 3],
-    laymult_hk5 = ['log', 2.0],
-    laymult_hk6 = ['log', 2.0],
-    laymult_ss1 = ['log', .05/200],
-    laymult_ss2 = ['log', 1e-5],
-    laymult_ss3 = ['log', 1e-5],
-    laymult_ss4 = ['log', 1e-5],
-    laymult_ss5 = ['log', 1e-5],
-    laymult_ss6 = ['log', 1e-5],
-    laymult_sy1 = ['fixed', 0.3],
-    laymult_vk1 = ['log' ,   0.1],
-    laymult_vk2 = ['log' ,   0.1],
-    laymult_vk3 = ['log' ,   0.1],
-    laymult_vk4 = ['log' ,   0.1],
-    laymult_vk5 = ['log' ,   0.1],
-    laymult_vk6 = ['log' ,   0.1])
-
-    print('Setting Parvals for those listed in set_laymult_start_values')
-    for k in parvals.keys():
-        c = df.loc[:, 'parnme'] == k
-        assert c.sum()==1, f"There is no matchinv parnme for {k}"
-        df.loc[c, ['partrans',  'parval1']] = parvals[k]
 
 def read_drain(folder):
     # Step 1: Open the text file and read lines
@@ -878,6 +885,7 @@ if __name__ == '__main__':
     write_kc(foldr)
     write_OFE(foldr)
 
+    pre_run(foldr)
     pre_run(foldr)
 
     if pyemu.os_utils.platform.system() == 'Windows':
