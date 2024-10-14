@@ -142,6 +142,40 @@ def get_prefix_dict_for_pilot_points():
     return prefix_dict
 
 
+def set_laymult_start_values(df):
+    '''set partrans and parval1 in the parameter data df'''
+
+    assert isinstance(df, pd.DataFrame)
+
+    parvals = dict(
+    laymult_drn_k = ['log', 33.6],
+    laymult_fmp_vk = ['log',   0.0008873],
+    laymult_hk1 = ['log', 5],
+    laymult_hk2 = ['log', 0.1],
+    laymult_hk3 = ['log', 0.1],
+    laymult_hk4 = ['log', 3],
+    laymult_hk5 = ['log', 2.0],
+    laymult_hk6 = ['log', 2.0],
+    laymult_ss1 = ['log', .05/200],
+    laymult_ss2 = ['log', 1e-5],
+    laymult_ss3 = ['log', 1e-5],
+    laymult_ss4 = ['log', 1e-5],
+    laymult_ss5 = ['log', 1e-5],
+    laymult_ss6 = ['log', 1e-5],
+    laymult_sy1 = ['fixed', 0.3],
+    laymult_vk1 = ['log' ,   0.1],
+    laymult_vk2 = ['log' ,   0.1],
+    laymult_vk3 = ['log' ,   0.1],
+    laymult_vk4 = ['log' ,   0.1],
+    laymult_vk5 = ['log' ,   0.1],
+    laymult_vk6 = ['log' ,   0.1])
+
+    print('Setting Parvals for those listed in set_laymult_start_values')
+    for k in parvals.keys():
+        c = df.loc[:, 'parnme'] == k
+        assert c.sum()==1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['partrans',  'parval1']] = parvals[k]
+
 def read_drain(folder):
     # Step 1: Open the text file and read lines
     f = os.path.join(folder, 'drt.drt')
