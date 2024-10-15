@@ -7,35 +7,82 @@ import shutil
 import flopy
 import flopy.utils.binaryfile as bf
 from datetime import datetime
-
+from scipy.stats import hmean
 print(f"loading forward_run.py from {os.getcwd()}")
 
+
+
+def set_laymult_start_values(df):
+    '''set partrans and parval1 in the parameter data df'''
+
+    assert isinstance(df, pd.DataFrame)
+
+    parvals = dict(
+    laymult_drn_k = ['log',         33.6, 10, 50000,   ],
+    laymult_fmp_vk = ['log',   0.0008873, 0.0001, .01,   ],
+    laymult_hk1 = ['log', 5             , 1e-5, 1000,   ],
+    laymult_hk2 = ['log', 0.1           , 1e-5, 1000,   ],
+    laymult_hk3 = ['log', 0.1           , 1e-5, 1000,   ],
+    laymult_hk4 = ['log', 3             , 1e-5, 1000,   ],
+    laymult_hk5 = ['log', 2.0           , 1e-5, 1000,   ],
+    laymult_hk6 = ['log', 2.0           , 1e-5, 1000,   ],
+    laymult_ss1 = ['log', .05/200       ,  1e-6, 1e-3,  ],
+    laymult_ss2 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
+    laymult_ss3 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
+    laymult_ss4 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_ss5 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_ss6 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
+    laymult_sy1 = ['fixed', 0.3         ,  .005,    1,  ],
+    laymult_vk1 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk2 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk3 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk4 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk5 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+    laymult_vk6 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+
+    # laymult_hk=[1e-5, 1000, 1.],
+    # laymult_vk=[1e-3, 1e-1, 1.],
+    # laymult_ss=[1e-6, 1e-3, 1.],
+    # laymult_sy=[0.0001, 0.3, 1.],
+    # laymult_drn_k=[10, 50000, 5000],
+    # laymult_fmp_vk=[0.0001, .01, 0.001],
+    )
+
+    print('Setting Parvals for those listed in set_laymult_start_values')
+    for k in parvals.keys():
+        c = df.loc[:, 'parnme'] == k
+        assert c.sum()==1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['partrans',  'parval1', 'parlbnd','parubnd']] = parvals[k]
+
+    print(df.loc[df.parnme.isin(list(parvals.keys())),['parnme','partrans',  'parval1', 'parlbnd','parubnd'] ])
+
+    return df
 
 def get_zone_bounds():
     '''
     multiplier bounds for pilot points and zones
     '''
-    zone_bounds = dict(sy1=[0.1, 100],  # lo, hi
-                       ss1=[0.001, 100],
-                       ss2=[0.001, 100],
-                       ss3=[0.001, 100],
-                       ss4=[0.001, 100],
-                       ss5=[0.001, 100],
-                       ss6=[0.001, 100],
-                       vk1=[0.001, 100],
-                       vk2=[0.001, 100],
-                       vk3=[0.001, 100],
-                       vk4=[0.001, 100],
-                       vk5=[0.001, 100],
-                       vk6=[0.001, 100],
-                       hk1=[0.001, 100],
-                       hk2=[0.001, 100],
-                       hk3=[0.001, 100],
-                       hk4=[0.001, 100],
-                       hk5=[0.001, 100],
-                       hk6=[0.001, 100],
-                       drn_k=[0.001, 100],
-                       fmp_vk=[0.0001, 100], )
+    zone_bounds = dict(sy1=[0.1,       100,    1.0],  # lo, hi, parval1
+                       ss1=[0.001,     100,    1.0],
+                       ss2=[0.001,     100,    1.0],
+                       ss3=[0.001,     100,    1.0],
+                       ss4=[0.001,     100,    1.0],
+                       ss5=[0.001,     100,    1.0],
+                       ss6=[0.001,     100,    1.0],
+                       vk1=[0.001,     100,    1.0],
+                       vk2=[0.001,     100,    1.0],
+                       vk3=[0.001,     100,    1.0],
+                       vk4=[0.001,     100,    1.0],
+                       vk5=[0.001,     100,    1.0],
+                       vk6=[0.001,     100,    1.0],
+                       hk1=[0.001,     100,    1.0],
+                       hk2=[0.001,     100,    1.0],
+                       hk3=[0.001,     100,    1.0],
+                       hk4=[0.001,     100,    1.0],
+                       hk5=[0.001,     100,    1.0],
+                       hk6=[0.001,     100,    1.0],
+                       drn_k=[0.001,   100,    1.0],
+                       fmp_vk=[0.0001, 100,    1.0], )
 
     return zone_bounds
 
@@ -46,19 +93,12 @@ def get_parbounds():
                      fieswp=[0.5, 0.999, 0.7],
 
                      hfb=[0.000001, 1000, 1000],
-                     fmp_kc=[1/1.3, 1., 1.0],  # individual kc multipliers
+                     fmp_kc=[1/1.3, 1.3, 1.0],  # individual kc multipliers
                      fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values. vineyards are set in PEST.ipynb at 0.95
                      fmp_sfac=[1/1.3, 1.3, 1.0], # multiplier for crop kc
-
                      rurfac=[.8, 1.25, 1.0],
-
-                     laymult_drn_k=[10, 50000, 5000],
-                     laymult_fmp_vk=[0.0001, .01, 0.001],
                      ghbk=[0.0001, 10000, 1.4E-02],
-                     laymult_hk=[1e-5, 1000, 1.],
-                     laymult_vk=[1e-3, 1e-1, 1.],
-                     laymult_ss=[1e-6, 1e-3, 1.],
-                     laymult_sy=[0.0001, 0.3, 1.]
+
                      )  # all sfac/kc multipliers
 
     return parbounds
@@ -94,28 +134,35 @@ def get_bounds():
 def set_crop_depth_irr_obs(df):
     # Sample data setup
     irr_depth = {'BareLand': 0.0,
-                 'CitrusSubtropic': 2.5,
-                 'DeciduousFruits': 0.05,
+                 'CitrusSubtropic': 1.9, # some years are zero Q...
+                 'DeciduousFruits': 1.5,
                  'FieldCrop': 2.0,
-                 'GrainHayCrops': 5.0,
+                 'GrainHayCrops': 2.0,
                  'Idle': 0.0,
                  'NativeVegetation': 0.0,
-                 'Pasture': 2.0,
+                 'Pasture': 4.0,
                  'SemiAgricultural': 0.0,
                  'SemiPaved': 0.0,
-                 'TruckNursery': 0.2,
-                 'Turf': 3,
+                 'TruckNursery': 0.6,
+                 'Turf': 3.,
                  'Vineyard': 0.6,
                  'Walnuts': 2.0,
                  'Water': 0.0}
 
-    # Assuming df is your DataFrame and parnme is one of the columns
     def update_obsval_weight(row, irr_depth):
         for key in irr_depth:
-            if 'irrdepth' in row['parnme'] and key in row['parnme']:
+            if key.lower() in row['obsnme']:
                 row['obsval'] = irr_depth[key]
-                row['weight'] = 1.0
-                row['standard_deviation'] = 0.1
+                row['weight'] = 1.0*row['weight']
+                row['standard_deviation'] = 0.3
+
+                if 'vine' in key.lower():
+                    row['weight'] = 3.*row['weight']
+                    row['standard_deviation'] = 0.1
+
+                if int(row['obsnme'].split('date:')[1][0:4]) <=1975:
+                    row['weight'] = 0
+
         return row
 
     # Apply the function to each row
@@ -133,6 +180,7 @@ def get_prefix_dict_for_pilot_points():
                    5: ["hk6", "ss6", "vk6"]}
 
     return prefix_dict
+
 
 
 def read_drain(folder):
@@ -204,11 +252,11 @@ def write_kc(folder):
             parts = line.split()
 
             # Check if the line starts a new section
-            if "SFAC" in line:
+            if "SFAC" in line: # write scale factor for a KC values
                 # current_multiplier = multiplier_dict[parts[1]]
                 line = f"{parts[0]}\t{SFAC}\t{parts[2]}\t{parts[3]}\n"
                 outfile.write(line)  # Write the header line as-is
-            else:
+            else: #multiply monthly kc value by kc scale factor eg kc_vineyards
                 # Modify the second column
                 # try:
                 index = parts[0]
@@ -317,8 +365,9 @@ def HK_extract(workspace):
         laybot = int(row['laybot'])
 
         avg = hk[slice(laytop, laybot + 1, 1), row['i'], row['j']]
-        obs_vals.loc[ind, 'hk_pest'] = np.mean(avg)
-
+        obs_vals.loc[ind, 'hk_pest'] = np.log10(hmean(avg))
+        obs_vals.loc[ind, 'arithmethic_mean'] = hmean(avg)
+        obs_vals.loc[ind, 'harmonic_mean'] = np.mean(avg)
         print(
             f"wellname:{row['well']}\n\tlaytop - {laybot}, laybot-{laybot}\n\tlayer values:--\n\t\t{avg}\n\tactual value\n\t\t{np.mean(avg):.3g}\n")
 
@@ -339,12 +388,12 @@ def summarize_budget(folder):
     # Perform the groupby and aggregation
     bud = bud.groupby(pd.to_datetime(bud.DATE_START).dt.year).agg(agg_funcs)
 
-    # bud = bud.groupby(pd.to_datetime(bud.DATE_START).dt.year).sum()
+    cols_ = ['STORAGE_IN', 'STORAGE_OUT', "DRT_OUT",
+     'RURWELLS_OUT', "MNIWELLS_OUT", 'GHB_IN', 'RCH_IN', 'SFR_IN', 'SFR_OUT',
+     'MNW2_IN', 'MNW2_OUT', 'FMP_WELLS_OUT', 'FMP_FNR_IN', 'FMP_FNR_OUT',
+     'IN_OUT', 'PERCENT_ERROR']
 
-    bud = bud.loc[:, ['STORAGE_IN', 'STORAGE_OUT', "DRT_OUT",
-                      'RURWELLS_OUT', "MNIWELLS_OUT", 'GHB_IN', 'RCH_IN', 'SFR_IN', 'SFR_OUT',
-                      'MNW2_IN', 'MNW2_OUT', 'FMP_WELLS_OUT', 'FMP_FNR_IN', 'FMP_FNR_OUT',
-                      'IN_OUT', 'PERCENT_ERROR'], ]
+    bud = bud.reindex(columns = cols_).fillna(0)
 
     bud.index = pd.to_datetime(bud.index, format='%Y')
     bud.index.name = 'Date'
@@ -492,18 +541,31 @@ def calculate_differences(series, n):
     return differences
 
 
-def rolling_mean(df, nyears=10, nmonths = None):
+def rolling_mean(df, nyears=None, nmonths=None):
     '''rolling mean of hydobs/and gwle data. dates are labeled as end of period. for 10-year it is past end of model, but just represents periods>2015-12-31'''
 
     if isinstance(nyears, int):
-        df = df.resample(f'{nyears}Y').mean()
+        window = 12 * nyears
     elif isinstance(nmonths, int):
-        df = df.resample(f'{nmonths}M').mean()
+        window = nmonths
     else:
         raise ValueError('nmonths and nyears are None')
 
-    return df
+    print(f"window: {window}")
+    c = (df.rolling(window, min_periods=1, ).count() == window).all(axis=1)
+    rn = df.rolling(window, min_periods=1, ).mean() #remove rows without window number of measurements
+    rn = rn.loc[c]
 
+    #now revers the index, take window freq measurements, then reverse, and filter the final
+    ind = rn.index
+    ind = ind[::-1][::window][::-1]
+    rn = rn.loc[ind]
+
+    return rn
+
+def limit_hyd_obs_date_range(df, end_of_model = '2018-09-30'):
+    df = df.loc[:end_of_model,:]
+    return df
 
 def run_all_hyd_obs(workspace):
     bigobj = load_hydobs(workspace)
@@ -519,7 +581,7 @@ def run_all_hyd_obs(workspace):
     print(f'there are {diff_obs.shape[0]} observations in the GWLE observation drawdown elev file')
 
     # rolling observations
-    roll = rolling_mean(bigobj, nyears=10)
+    roll = rolling_mean(bigobj, nyears=8,nmonths=None)
     roll_obs = create_obs_from_hyd(roll)
 
     #rolling 18month
@@ -554,6 +616,8 @@ def get_zone_bud(workspace):
     print(f'the start date time for the zone budget dataframe is {start_datetime_df}')
 
     zones_2020 = np.ones([6, 275, 85], dtype=int)
+
+    #todo fix zonation_gwbasin_lay_
 
     for lay in np.arange(0, 6):
         zones_2020[lay, :, :] = np.genfromtxt(os.path.join(workspace, 'zbud', f'zonation_gwbasin_lay_{lay + 1}.csv'),
@@ -620,6 +684,7 @@ def crop_irr_depth(workspace):
     fb = fb.droplevel(0, 1)
     fb = fb.rename(columns=land_use_renamed)
     fb.index.name = 'date'
+    fb.columns.name = 'CROP'
     fb.unstack().to_frame('term').to_csv(outfile)
 
     return fb
@@ -658,6 +723,7 @@ def total_irr_demand(workspace):
     fb.index = pd.to_datetime(fb.index, format="%Y")
     fb = fb.droplevel(0, 1)
     fb.index.name = 'date'
+    fb.columns.name = 'CROP'
     fb = fb.rename(columns=land_use_renamed)
     fb.unstack().to_frame('term').to_csv(outfile)
 
@@ -706,6 +772,82 @@ def water_year(date):
         # print('not a Series/datetime/DatetimeIndex object')
         return np.nan
 
+def re_run_model_for_init(folder,  turn_off = False):
+    '''
+    set model files to off/on and limit nper for re-running the model
+    :param folder:
+    :param sv_nam_file:
+    :param sv_bas6_file:
+    :param turn_off:
+    :return: None
+    '''
+
+    sv_nam_file = 'SVIGFM_GSP.nam'
+    sv_bas6_file = 'sv_model_grid_6layers_GSP.dis'
+    # Modify the sv.nam file
+    nam = os.path.join(folder, sv_nam_file )
+    bas = os.path.join(folder, sv_bas6_file)
+
+    if turn_off:
+        nper = 121
+    else:
+        nper = 586
+
+    print(f"\nChanging the following files for a re-run. setting turn_off=={turn_off} and nper={nper}\n\t{sv_nam_file} and \n\t{sv_bas6_file}\n")
+
+    with open(nam, 'r') as file:
+        lines = file.readlines()
+
+    # Add '#' in front of lines containing 'WEL'
+    with open(nam, 'w') as file:
+        for line in lines:
+            if 'SON.wel' in line:
+                if turn_off:
+                    file.write(f"# WEL 12 SON.wel\n")
+                    print('turned OFF wel file')
+                else:
+                    file.write(f"WEL 12 SON.wel\n")
+                    print('turned ON wel file')
+            else:
+                file.write(line)
+
+    # Modify the sv.bas6 file
+    with open(bas, 'r') as file:
+        bas6_lines = file.readlines()
+
+    # Change the 586 value on the second line
+    second_line_parts = bas6_lines[1].split()
+    second_line_parts[3] = str(nper)  # Assuming 586 is the 4th value (index 3)
+    bas6_lines[1] = '  '.join(second_line_parts) + '\n'
+
+    with open(sv_bas6_file, 'w') as file:
+        file.writelines(bas6_lines)
+
+    print(f'set bas6 to {nper} stress periods\n\n')
+
+
+def pre_run(folder):
+    re_run_model_for_init(folder, turn_off=True)
+
+    if pyemu.os_utils.platform.system() == 'Windows':
+        print('running pre-run')
+        pyemu.os_utils.run(r'mf-owhm.exe SVIGFM_GSP.nam')
+    else:
+        print('running pre-run')
+        pyemu.os_utils.run(r'mf-owhm.nix SVIGFM_GSP.nam')
+
+    filename = os.path.join(folder, 'output', "sv_model_grid_6layers.hds")
+    hdsobj = bf.HeadFile(filename)
+    times = hdsobj.get_times()
+    hds = hdsobj.get_data(totim=times[-1])
+    print(f"setting starting heads from {pd.to_datetime('1/1/1969') + pd.to_timedelta(times[-1], unit='D')}")
+
+    for lay in range(0, 6):
+        head = hds[lay]
+        print('writing heads to ', os.path.join(folder, 'init_heads', f"init_heads_lay{lay + 1}.dat"))
+        np.savetxt(os.path.join(folder, 'init_heads', f"init_heads_lay{lay + 1}.dat"), head, fmt="%.0f")
+
+    re_run_model_for_init(folder, turn_off=False)
 
 def post_process(folder):
     get_zone_bud(folder)
@@ -742,6 +884,9 @@ if __name__ == '__main__':
 
     write_kc(foldr)
     write_OFE(foldr)
+
+    pre_run(foldr)
+    pre_run(foldr)
 
     if pyemu.os_utils.platform.system() == 'Windows':
         print('running with windows executable')
