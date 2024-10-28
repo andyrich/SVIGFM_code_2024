@@ -3,7 +3,7 @@
 Created on Thu Oct  3 15:25:13 2024
 
     @author: pwickham
-    Script Name: BuildSFR.py
+    Script Name: PlotSpecifiedReachFlows.py
     Author: Patrick Wickham
     Email: pwickham@elmontgomery.com
     Created: October 2024
@@ -44,7 +44,7 @@ Created on Thu Oct  3 15:25:13 2024
         
 
 """
-def ProcessSFRForPest(Times=['12/1/1969','9/1/2018'],htmlPlots='y',CalibPlots='y', GaugeLocations={ # dictionary of gauge locations in format 'Name': ['row_col']
+def ProcessSFRForPest(Times=['12/1/1969','9/1/2018'],htmlPlots='n',CalibPlots='n', GaugeLocations={ # dictionary of gauge locations in format 'Name': ['row_col']
 'Sonoma Creek at Agua Caliente Rd': ['100_38'],
 'Sonoma Creek at Verano Ave': ['116_39'],
 'Sonoma Creek at Leveroni Rd': ['136_37'],
@@ -200,10 +200,12 @@ def ProcessSFRForPest(Times=['12/1/1969','9/1/2018'],htmlPlots='y',CalibPlots='y
                     print("    HAS OBSERVATIONS, PLOTTING CALIBRATION")
                     fig.add_trace(go.Scatter(x=obs['Month'], y=np.log(obs['Discharge']), name="Discharge Observations", mode='markers')) 
             
-                fig.update_layout(title=gauge_name,xaxis_title='Stress Period',yaxis_title='Flows, Model Units (Ft^3/s), Log Normalized',legend_title='flow',  barmode='relative') #  yaxis_type='log'
+                fig.update_layout(title=gauge_name,xaxis_title='Stress Period',yaxis_title='Flows, Model Units (Ft^3/s)',legend_title='flow',  barmode='relative') #  yaxis_type='log'
                 fig.write_html(export_directory+'Calib_'+str(clean_gauge_name)+'.html')
-                fig.write_image(export_directory+'Calib_'+str(clean_gauge_name)+'.jpg', scale=5) # requires kaleido dependency (e.g. conda install kaleido)
-            
+                try:
+                    fig.write_image(export_directory+'Calib_'+str(clean_gauge_name)+'.jpg', scale=5) # requires kaleido dependency (e.g. conda install kaleido)
+                except:
+                    print("       FOR PRINTING JPGS, INSTALL KALEIDO")
             segment_rchdf.loc[:, 'GaugeName'] = gauge_name
             segment_rchdf.to_excel(export_directory+str(clean_gauge_name)+'.xlsx')
             
@@ -211,8 +213,8 @@ def ProcessSFRForPest(Times=['12/1/1969','9/1/2018'],htmlPlots='y',CalibPlots='y
     CombinedSimulatedGaugeData=pd.merge(CombinedSimulatedGaugeData,Observation_df,left_on=['GaugeName','Date'],right_on=['SiteName','Month'],how='left')       
     
     CombinedSimulatedGaugeData['SimulatedLessObserved']=CombinedSimulatedGaugeData['FLOW_INTO_RCH']-CombinedSimulatedGaugeData['Discharge']
-    CombinedSimulatedGaugeData['LogObserved']=np.log(CombinedSimulatedGaugeData['Discharge']) 
-    CombinedSimulatedGaugeData['LogSimulated']=np.log(CombinedSimulatedGaugeData['FLOW_INTO_RCH']) 
+    CombinedSimulatedGaugeData['LogObserved']=np.where(CombinedSimulatedGaugeData['Discharge'] != 0,np.log(CombinedSimulatedGaugeData['Discharge']),np.nan) # handle log transformation on zero values by setting to nan. can set to zero if preferred
+    CombinedSimulatedGaugeData['LogSimulated'] = np.where(CombinedSimulatedGaugeData['FLOW_INTO_RCH'] != 0,np.log(CombinedSimulatedGaugeData['FLOW_INTO_RCH']),np.nan) # handle log transformation on zero values by setting to nan. can set to zero if preferred
     CombinedSimulatedGaugeData['LogSimulatedLessObserved']=CombinedSimulatedGaugeData['LogSimulated']-CombinedSimulatedGaugeData['LogObserved']
     
     CombinedSimulatedGaugeData.to_csv(export_directory+"AllGaugeData.csv")    
