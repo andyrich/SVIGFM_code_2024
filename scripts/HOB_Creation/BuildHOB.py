@@ -32,9 +32,29 @@ Created on Wed Sep  4 22:54:02 2024
         Added functionality to screen for dates (on top of existing functionality that screens for TOFF  >31 )
         Added optional Y/N functionality to average observations by stress period. 
 """
-import os
+
+#todo check son0170 to ensure it's not pulling heads from layer 2 or greater becauseit's returning -9999
+import os, sys
 import flopy
-print(os.getcwd())
+#Required Modules
+import pandas as pd
+import winsound
+import numpy as np
+import conda_scripts.load_datasets as lsd
+import conda_scripts
+
+sys.path.append('..')
+import forward_run
+import helpers
+
+#
+workspace = lsd.model_info.get_mod('son', True)
+ml = conda_scripts.sv_budget.load_sv_model.get_model(workspace)
+zones = helpers.get_zones(ml)
+
+print(zones.shape)
+print(zones.head())
+
 #===================================USER INPUTS==============================
 export_file=r'HOB20250910.hob' #where to print HOB
 WellListFile=r'WellDetails_20240911.xlsx' #File with WellName, Row, Col, X,Y, and percentage layering
@@ -51,10 +71,7 @@ TomulthLine='1       TOMULTH EVH '
 ITTLine='    1        ITT'
 layer_columns = ['Layer_1', 'Layer_2', 'Layer_3', 'Layer_4', 'Layer_5', 'Layer_6'] # layer columns in well excel file. must have numberic 1-n somewhere in the name
 
-#Required Modules
-import pandas as pd    
-import winsound
-import numpy as np
+
 
 # Grid parameters
 delr, delc = 500, 500
@@ -122,6 +139,12 @@ Wells['COFF'] = round((Wells['well_x_unrot'] - Wells['centroid_x_unrot']) / delr
 
 HOB_Database=pd.merge(Observations.sort_values('station_name'), Wells, on='station_name') # database with everything
 
+print(HOB_Database.head())
+HOB_Database = pd.merge(HOB_Database, zones.drop(columns = 'geometry'), left_on = ['Row','Col'], right_on= [ 'row', 'column'] )
+print(HOB_Database.columns.to_list())
+HOB_Database.loc[HOB_Database.zone==9, 'Layer_2'] = 0
+HOB_Database.loc[HOB_Database.zone==9, 'Layer_1'] = 1
+print(HOB_Database.columns.to_list())
 HOB_Database['NumAssignedLayers'] = (HOB_Database[layer_columns] > 0).sum(axis=1) # count number of layers with a non-0 layering assigned
 NH = len(HOB_Database)# NH is the total number of observations
 MOBS = (HOB_Database['NumAssignedLayers'] > 1).sum()# MOBS is the number of observations that have more than one layer assigned
@@ -197,11 +220,11 @@ with open(export_file, 'w') as file:
             date=entry.Timestamp.strftime('%m/%d/%Y')
             file.write(f"     {well}  {sp} {TOFF} {head} {date} \n")
             
-# Can QC using flopy if you'd like. as an example:
-m = flopy.modflow.Modflow()
-hobs = flopy.modflow.ModflowHob.load(export_file, m)
-            
-FinishedBeep()
+# # Can QC using flopy if you'd like. as an example:
+# m = flopy.modflow.Modflow()
+# hobs = flopy.modflow.ModflowHob.load(export_file, m)
+#
+# FinishedBeep()
 
 
 
