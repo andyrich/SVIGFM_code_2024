@@ -125,11 +125,7 @@ def get_zones(ml):
     zotther = z.copy()
     zotther[zotther>8] = 0
     
-    zones = {i:zotther  for i in range(7) }
-    zones[0] = z
-
-    
-    z = conda_scripts.arich_functions.array2rc(zones[1],'zone').astype({'zone':int,'row':int,'column':int})
+    z = conda_scripts.arich_functions.array2rc(z,'zone').astype({'zone':int,'row':int,'column':int})
     
     aliases = {1: 'Bay', 2: 'EastSide', 3: 'SouthCent', 4: 'Kenwood', 5: 'VOM', 6: 'AguaCal',7:'WestSide',8:'CitySon',9:'Highlands'}
     z.loc[:,'name'] =z.loc[:,'zone'].replace(aliases)
