@@ -1,4 +1,6 @@
 import os
+import warnings
+
 import numpy as np
 import pandas as pd
 import pyemu
@@ -8,8 +10,125 @@ import flopy
 import flopy.utils.binaryfile as bf
 from datetime import datetime
 from scipy.stats import hmean
+
+# import sfr_processing
 print(f"loading forward_run.py from {os.getcwd()}")
 
+
+def set_zoneentire_start_values(df):
+    '''set partrans and parval1 in the parameter data df'''
+
+    assert isinstance(df, pd.DataFrame)
+
+    parvals = dict(
+        # ['partrans', 'parval1', 'parlbnd', 'parubnd']
+        zoneentire_drn_k_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_bay=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_cityson=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_eastside=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_highlands=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_southcent=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_vom=['log', 1, 0.001, 1000],
+        zoneentire_drn_k_westside=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_bay=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_cityson=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_eastside=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_highlands=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_southcent=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_vom=['log', 1, 0.001, 1000],
+        zoneentire_fmp_vk_westside=['log', 1, 0.001, 1000],
+        zoneentire_hk_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_hk_bay=['log', 1, 0.001, 1000],
+        zoneentire_hk_cityson=['log', 0.1, 0.001, 1000],  # not equal to 1
+        zoneentire_hk_eastside=['log', 0.001, 0.001, 1000],  # not equal to 1
+        zoneentire_hk_highlands=['log', 0.1, 0.001, 1000],  # not equal to 1
+        zoneentire_hk_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_hk_southcent=['log', 1.0, 0.001, 1000],
+        zoneentire_hk_vom=['log', 1, 0.001, 1000],
+        zoneentire_hk_westside=['log', 0.1, 0.001, 1000],  # not equal to 1
+        zoneentire_ss_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_ss_bay=['log', 1, 0.001, 1000],
+        zoneentire_ss_cityson=['log', 1, 0.001, 1000],
+        zoneentire_ss_eastside=['log', 0.1, 0.001, 1000],  # not equal to 1
+        zoneentire_ss_highlands=['log', 1, 0.001, 1000],
+        zoneentire_ss_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_ss_southcent=['log', 1, 0.001, 1000],
+        zoneentire_ss_vom=['log', 1, 0.001, 1000],
+        zoneentire_ss_westside=['log', 1, 0.001, 1000],
+        zoneentire_sy_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_sy_bay=['log', 1, 0.001, 1000],
+        zoneentire_sy_cityson=['log', 1, 0.001, 1000],
+        zoneentire_sy_eastside=['log', 1, 0.001, 1000],
+        zoneentire_sy_highlands=['log', 1, 0.001, 1000],
+        zoneentire_sy_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_sy_southcent=['log', 1, 0.001, 1000],
+        zoneentire_sy_vom=['log', 1, 0.001, 1000],
+        zoneentire_sy_westside=['log', 1, 0.001, 1000],
+        zoneentire_vk_aguacal=['log', 1, 0.001, 1000],
+        zoneentire_vk_bay=['log', 1, 0.001, 1000],
+        zoneentire_vk_cityson=['log', 1, 0.001, 1000],
+        zoneentire_vk_eastside=['log', 1, 0.001, 1000],
+        zoneentire_vk_highlands=['log', 1, 0.001, 1000],
+        zoneentire_vk_kenwood=['log', 1, 0.001, 1000],
+        zoneentire_vk_southcent=['log', 1, 0.001, 1000],
+        zoneentire_vk_vom=['log', 1, 0.001, 1000],
+        zoneentire_vk_westside=['log', 1, 0.001, 1000],
+
+    )
+
+    print('Setting Parvals for those listed in set_zonemult_start_values')
+    for k in parvals.keys():
+        c = df.loc[:, 'parnme'] == k
+        assert c.sum() == 1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['partrans', 'parval1', 'parlbnd', 'parubnd']] = parvals[k]
+        df.loc[c, ['pargp', ]] = '_'.join(k.split('_')[0:2])
+
+    print(
+        df.loc[df.parnme.isin(list(parvals.keys())), ['parnme', 'partrans', 'parval1', 'parlbnd', 'parubnd', 'pargp']])
+
+    return df
+
+
+def set_zonemult_start_values(df):
+    parvals = dict(
+        zonemult_hk1_eastside=10.0,
+        zonemult_hk2_eastside=1.0,
+        zonemult_hk3_eastside=1.0,
+        zonemult_hk4_eastside=1.0,
+        zonemult_hk5_eastside=1.0,
+        zonemult_hk6_eastside=1.0,
+        zonemult_hk1_cityson=1.0,
+        zonemult_hk2_cityson=1.0,
+        zonemult_hk3_cityson=1.0,
+        zonemult_hk4_cityson=1.0,
+        zonemult_hk5_cityson=1.0,
+        zonemult_hk6_cityson=1.0,
+        zonemult_hk1_southcent=1.0,
+        zonemult_hk2_southcent=0.5,
+        zonemult_hk3_southcent=0.5,
+        zonemult_hk4_southcent=0.5,
+        zonemult_hk5_southcent=0.5,
+        zonemult_hk6_southcent=0.5,
+        zonemult_hk1_westside=1.0,
+        zonemult_hk2_westside=0.5,
+        zonemult_hk3_westside=0.5,
+        zonemult_hk4_westside=0.5,
+        zonemult_hk5_westside=0.5,
+        zonemult_hk6_westside=0.5,
+    )
+
+    print('Setting Parvals for those listed in set_zonemult_start_values')
+    for k in parvals.keys():
+        c = df.loc[:, 'parnme'] == k
+        assert c.sum() == 1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['parval1']] = parvals[k]
+
+    print(df.loc[df.parnme.isin(list(parvals.keys())), ['parnme', 'partrans', 'parval1', 'parlbnd', 'parubnd']])
+
+    return df
 
 
 def set_laymult_start_values(df):
@@ -17,85 +136,87 @@ def set_laymult_start_values(df):
 
     assert isinstance(df, pd.DataFrame)
 
+    # ['partrans', 'parval1', 'parlbnd', 'parubnd']
     parvals = dict(
-    laymult_drn_k = ['log',         33.6, 10, 50000,   ],
-    laymult_fmp_vk = ['log',   0.0008873, 0.0001, .01,   ],
-    laymult_hk1 = ['log', 5             , 1e-5, 1000,   ],
-    laymult_hk2 = ['log', 0.1           , 1e-5, 1000,   ],
-    laymult_hk3 = ['log', 0.1           , 1e-5, 1000,   ],
-    laymult_hk4 = ['log', 3             , 1e-5, 1000,   ],
-    laymult_hk5 = ['log', 2.0           , 1e-5, 1000,   ],
-    laymult_hk6 = ['log', 2.0           , 1e-5, 1000,   ],
-    laymult_ss1 = ['log', .05/200       ,  1e-6, 1e-3,  ],
-    laymult_ss2 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
-    laymult_ss3 = ['log', 1e-4          ,  1e-6, 1e-3,  ],
-    laymult_ss4 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
-    laymult_ss5 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
-    laymult_ss6 = ['log', 1e-5          ,  1e-6, 1e-3,  ],
-    laymult_sy1 = ['fixed', 0.3         ,  .005,    1,  ],
-    laymult_vk1 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
-    laymult_vk2 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
-    laymult_vk3 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
-    laymult_vk4 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
-    laymult_vk5 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
-    laymult_vk6 = ['log' ,   0.1        ,  1e-3, 1e-1,  ],
+        laymult_drn_k=['log', (500 * 500) * .0002, (500 * 500) * .00001, (500 * 500) * .001],
+        laymult_fmp_vk=['log', 0.0008873, 0.0001, .01, ],
+        laymult_hk1=['log', 5, 1e-5, 1000, ],
+        laymult_hk2=['log', 0.005, 1e-5, 100, ],
+        laymult_hk3=['log', 0.005, 1e-5, 100, ],
+        laymult_hk4=['log', .1, 1e-5, 100, ],
+        laymult_hk5=['log', 0.01, 1e-5, 100, ],
+        laymult_hk6=['log', 0.01, 1e-5, 100, ],
+        laymult_ss1=['log', .05 / 200, 1e-7, .3 / 50, ],
+        laymult_ss2=['log', 5e-5, 1e-6, 1e-3, ],
+        laymult_ss3=['log', 5e-5, 1e-6, 1e-3, ],
+        laymult_ss4=['log', 5e-6, 1e-6, 1e-3, ],
+        laymult_ss5=['log', 5e-6, 1e-6, 1e-3, ],
+        laymult_ss6=['log', 5e-6, 1e-6, 1e-3, ],
+        laymult_sy1=['fixed', 0.3, .005, 1, ],
+        laymult_vk1=['log', 0.1, 1e-3, 1e-1, ],
+        laymult_vk2=['log', 1e-2, 1e-3, 1e-1, ],
+        laymult_vk3=['log', 1e-2, 1e-3, 1e-1, ],
+        laymult_vk4=['log', 1e-2, 1e-3, 1e-1, ],
+        laymult_vk5=['log', 1e-2, 1e-3, 1e-1, ],
+        laymult_vk6=['log', 1e-2, 1e-3, 1e-1, ],
 
-    # laymult_hk=[1e-5, 1000, 1.],
-    # laymult_vk=[1e-3, 1e-1, 1.],
-    # laymult_ss=[1e-6, 1e-3, 1.],
-    # laymult_sy=[0.0001, 0.3, 1.],
-    # laymult_drn_k=[10, 50000, 5000],
-    # laymult_fmp_vk=[0.0001, .01, 0.001],
+        # laymult_hk=[1e-5, 1000, 1.],
+        # laymult_vk=[1e-3, 1e-1, 1.],
+        # laymult_ss=[1e-6, 1e-3, 1.],
+        # laymult_sy=[0.0001, 0.3, 1.],
+        # laymult_drn_k=[10, 50000, 5000],
+        # laymult_fmp_vk=[0.0001, .01, 0.001],
     )
 
     print('Setting Parvals for those listed in set_laymult_start_values')
     for k in parvals.keys():
         c = df.loc[:, 'parnme'] == k
-        assert c.sum()==1, f"There is no matchinv parnme for {k}"
-        df.loc[c, ['partrans',  'parval1', 'parlbnd','parubnd']] = parvals[k]
+        assert c.sum() == 1, f"There is no matchinv parnme for {k}"
+        df.loc[c, ['partrans', 'parval1', 'parlbnd', 'parubnd']] = parvals[k]
 
-    print(df.loc[df.parnme.isin(list(parvals.keys())),['parnme','partrans',  'parval1', 'parlbnd','parubnd'] ])
+    print(df.loc[df.parnme.isin(list(parvals.keys())), ['parnme', 'partrans', 'parval1', 'parlbnd', 'parubnd']])
 
     return df
+
 
 def get_zone_bounds():
     '''
     multiplier bounds for pilot points and zones
     '''
-    zone_bounds = dict(sy1=[0.1,       100,    1.0],  # lo, hi, parval1
-                       ss1=[0.001,     100,    1.0],
-                       ss2=[0.001,     100,    1.0],
-                       ss3=[0.001,     100,    1.0],
-                       ss4=[0.001,     100,    1.0],
-                       ss5=[0.001,     100,    1.0],
-                       ss6=[0.001,     100,    1.0],
-                       vk1=[0.001,     100,    1.0],
-                       vk2=[0.001,     100,    1.0],
-                       vk3=[0.001,     100,    1.0],
-                       vk4=[0.001,     100,    1.0],
-                       vk5=[0.001,     100,    1.0],
-                       vk6=[0.001,     100,    1.0],
-                       hk1=[0.001,     100,    1.0],
-                       hk2=[0.001,     100,    1.0],
-                       hk3=[0.001,     100,    1.0],
-                       hk4=[0.001,     100,    1.0],
-                       hk5=[0.001,     100,    1.0],
-                       hk6=[0.001,     100,    1.0],
-                       drn_k=[0.001,   100,    1.0],
-                       fmp_vk=[0.0001, 100,    1.0], )
+    zone_bounds = dict(sy1=[0.1, 100, 1.0],  # lo, hi, parval1
+                       ss1=[0.001, 100, 1.0],
+                       ss2=[0.001, 100, 1.0],
+                       ss3=[0.001, 100, 1.0],
+                       ss4=[0.001, 100, 1.0],
+                       ss5=[0.001, 100, 1.0],
+                       ss6=[0.001, 100, 1.0],
+                       vk1=[0.001, 100, 1.0],
+                       vk2=[0.001, 100, 1.0],
+                       vk3=[0.001, 100, 1.0],
+                       vk4=[0.001, 100, 1.0],
+                       vk5=[0.001, 100, 1.0],
+                       vk6=[0.001, 100, 1.0],
+                       hk1=[0.001, 100, 1.0],
+                       hk2=[0.001, 100, 1.0],
+                       hk3=[0.001, 100, 1.0],
+                       hk4=[0.001, 100, 1.0],
+                       hk5=[0.001, 100, 1.0],
+                       hk6=[0.001, 100, 1.0],
+                       drn_k=[0.001, 100, 1.0],
+                       fmp_vk=[0.0001, 100, 1.0], )
 
     return zone_bounds
 
 
 def get_parbounds():
     '''parameter bounds for OTHER parameters'''
-    parbounds = dict(sfr=[0.0001, 1000, 1e-2],  # lo, hi, initial values
+    parbounds = dict(sfr=[1e-9, 1000, 1e-2],  # lo, hi, initial values
                      fieswp=[0.5, 0.999, 0.7],
 
-                     hfb=[0.000001, 1000, 1000],
-                     fmp_kc=[1/1.3, 1.3, 1.0],  # individual kc multipliers
+                     hfb=[0.000001, 1000000, 1000],
+                     fmp_kc=[1 / 1.3, 1.3, 1.0],  # individual kc multipliers
                      fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values. vineyards are set in PEST.ipynb at 0.95
-                     fmp_sfac=[1/1.3, 1.3, 1.0], # multiplier for crop kc
+                     fmp_sfac=[1 / 1.3, 1.3, 1.0],  # multiplier for crop kc
                      rurfac=[.8, 1.25, 1.0],
                      ghbk=[0.0001, 10000, 1.4E-02],
 
@@ -106,26 +227,26 @@ def get_parbounds():
 
 def get_bounds():
     '''actual paremter bounds to be enforced at time of writing arrays'''
-    bounds = dict(sy1=[0.0001, 0.3],  # lo, hi
-                  ss1=[1e-6, 0.3 / 50],
-                  ss2=[1e-6, 1e-3],
-                  ss3=[1e-6, 1e-3],
-                  ss4=[1e-6, 1e-3],
-                  ss5=[1e-6, 1e-3],
-                  ss6=[1e-6, 1e-3],
-                  vk1=[1e-3, 1e-1],
-                  vk2=[1e-3, 1e-1],
-                  vk3=[1e-3, 1e-1],
-                  vk4=[1e-3, 1e-1],
-                  vk5=[1e-3, 1e-1],
-                  vk6=[1e-3, 1e-1],
-                  hk1=[1e-5, 1000],
-                  hk2=[1e-5, 1000],
-                  hk3=[1e-5, 1000],
-                  hk4=[1e-5, 1000],
-                  hk5=[1e-5, 1000],
-                  hk6=[1e-5, 1000],
-                  drn_k=[10, 10000],
+    bounds = dict(sy1=[0.0000001, 0.3],  # lo, hi
+                  ss1=[1e-7, 0.3 / 50],
+                  ss2=[1e-7, 1e-2],
+                  ss3=[1e-7, 1e-2],
+                  ss4=[1e-7, 1e-2],
+                  ss5=[1e-7, 1e-2],
+                  ss6=[1e-7, 1e-2],
+                  vk1=[1e-5, 1],
+                  vk2=[1e-5, 1],
+                  vk3=[1e-5, 1],
+                  vk4=[1e-5, 1],
+                  vk5=[1e-5, 1],
+                  vk6=[1e-5, 1],
+                  hk1=[1.1e-10, 1e3],
+                  hk2=[1.1e-10, 1e3],
+                  hk3=[1.1e-10, 1e3],
+                  hk4=[1.1e-10, 1e3],
+                  hk5=[1.1e-10, 1e3],
+                  hk6=[1.1e-10, 1e3],
+                  drn_k=[(500 * 500) * .00001, (500 * 500) * .01],
                   fmp_vk=[0.0001, .01],
                   )
     return bounds
@@ -134,7 +255,7 @@ def get_bounds():
 def set_crop_depth_irr_obs(df):
     # Sample data setup
     irr_depth = {'BareLand': 0.0,
-                 'CitrusSubtropic': 1.9, # some years are zero Q...
+                 'CitrusSubtropic': 1.9,  # some years are zero Q...
                  'DeciduousFruits': 1.5,
                  'FieldCrop': 2.0,
                  'GrainHayCrops': 2.0,
@@ -151,16 +272,16 @@ def set_crop_depth_irr_obs(df):
 
     def update_obsval_weight(row, irr_depth):
         for key in irr_depth:
-            if key.lower() in row['obsnme']:
+            if 'depth' in row['obsnme'] and key.lower() in row['obsnme']:
                 row['obsval'] = irr_depth[key]
-                row['weight'] = 1.0*row['weight']
-                row['standard_deviation'] = 0.3
+                row['weight'] = 1.0 * row['weight']
+                row['standard_deviation'] = 0.5
 
                 if 'vine' in key.lower():
-                    row['weight'] = 3.*row['weight']
+                    row['weight'] = 10. * row['weight']
                     row['standard_deviation'] = 0.1
 
-                if int(row['obsnme'].split('date:')[1][0:4]) <=1975:
+                if int(row['obsnme'].split('date:')[1][0:4]) <= 1975:
                     row['weight'] = 0
 
         return row
@@ -173,14 +294,13 @@ def set_crop_depth_irr_obs(df):
 
 def get_prefix_dict_for_pilot_points():
     prefix_dict = {0: ["hk1", 'ss1', "sy1", "vk1", 'fmp_vk', 'drn_k'],
-                   1: ["hk2", "ss2", "vk2" ],
+                   1: ["hk2", "ss2", "vk2"],
                    2: ["hk3", "ss3", "vk3"],
                    3: ["hk4", "ss4", "vk4"],
                    4: ["hk5", "ss5", "vk5"],
                    5: ["hk6", "ss6", "vk6"]}
 
     return prefix_dict
-
 
 
 def read_drain(folder):
@@ -252,11 +372,11 @@ def write_kc(folder):
             parts = line.split()
 
             # Check if the line starts a new section
-            if "SFAC" in line: # write scale factor for a KC values
+            if "SFAC" in line:  # write scale factor for a KC values
                 # current_multiplier = multiplier_dict[parts[1]]
                 line = f"{parts[0]}\t{SFAC}\t{parts[2]}\t{parts[3]}\n"
                 outfile.write(line)  # Write the header line as-is
-            else: #multiply monthly kc value by kc scale factor eg kc_vineyards
+            else:  #multiply monthly kc value by kc scale factor eg kc_vineyards
                 # Modify the second column
                 # try:
                 index = parts[0]
@@ -323,7 +443,11 @@ def write_pilot_point(layer, prop, model_ws, skip_writing_output=False):
 
     assert mult.shape == lay.shape == hk_arr.shape, f"shapes are not equal\nmult.shape=={mult.shape}\nlay.shape=={lay.shape}\nhk_arr.shape=={hk_arr.shape}\n"
 
-    out = hk_arr * mult * lay
+    lay_f = os.path.join(model_ws, 'zone_pest_mult', f"zoneentire_{prop}.csv")
+    assert os.path.exists(lay_f), f"{lay_f} does not exist"
+    zoneentire = np.genfromtxt(lay_f, delimiter=',')
+
+    out = hk_arr * mult * lay * zoneentire
 
     # set parameter bounds
     bounds = get_bounds()[prop]
@@ -336,7 +460,7 @@ def write_pilot_point(layer, prop, model_ws, skip_writing_output=False):
         np.savetxt(array_out, out)
         print(f"final array written to {array_out}")
 
-    return out, lay, mult, hk_arr
+    return out, lay, mult, hk_arr, zoneentire
 
 
 def write_all_pp(model_ws, skip_writing_output=False):
@@ -389,11 +513,11 @@ def summarize_budget(folder):
     bud = bud.groupby(pd.to_datetime(bud.DATE_START).dt.year).agg(agg_funcs)
 
     cols_ = ['STORAGE_IN', 'STORAGE_OUT', "DRT_OUT",
-     'RURWELLS_OUT', "MNIWELLS_OUT", 'GHB_IN', 'RCH_IN', 'SFR_IN', 'SFR_OUT',
-     'MNW2_IN', 'MNW2_OUT', 'FMP_WELLS_OUT', 'FMP_FNR_IN', 'FMP_FNR_OUT',
-     'IN_OUT', 'PERCENT_ERROR']
+             'RURWELLS_OUT', "MNIWELLS_OUT", 'GHB_IN', 'RCH_IN', 'SFR_IN', 'SFR_OUT',
+             'MNW2_IN', 'MNW2_OUT', 'FMP_WELLS_OUT', 'FMP_FNR_IN', 'FMP_FNR_OUT',
+             'IN_OUT', 'PERCENT_ERROR']
 
-    bud = bud.reindex(columns = cols_).fillna(0)
+    bud = bud.reindex(columns=cols_).fillna(0)
 
     bud.index = pd.to_datetime(bud.index, format='%Y')
     bud.index.name = 'Date'
@@ -553,7 +677,7 @@ def rolling_mean(df, nyears=None, nmonths=None):
 
     print(f"window: {window}")
     c = (df.rolling(window, min_periods=1, ).count() == window).all(axis=1)
-    rn = df.rolling(window, min_periods=1, ).mean() #remove rows without window number of measurements
+    rn = df.rolling(window, min_periods=1, ).mean()  #remove rows without window number of measurements
     rn = rn.loc[c]
 
     #now revers the index, take window freq measurements, then reverse, and filter the final
@@ -563,9 +687,11 @@ def rolling_mean(df, nyears=None, nmonths=None):
 
     return rn
 
-def limit_hyd_obs_date_range(df, end_of_model = '2018-09-30'):
-    df = df.loc[:end_of_model,:]
+
+def limit_hyd_obs_date_range(df, end_of_model='2018-09-30'):
+    df = df.loc[:end_of_model, :]
     return df
+
 
 def run_all_hyd_obs(workspace):
     bigobj = load_hydobs(workspace)
@@ -581,7 +707,7 @@ def run_all_hyd_obs(workspace):
     print(f'there are {diff_obs.shape[0]} observations in the GWLE observation drawdown elev file')
 
     # rolling observations
-    roll = rolling_mean(bigobj, nyears=8,nmonths=None)
+    roll = rolling_mean(bigobj, nyears=8, nmonths=None)
     roll_obs = create_obs_from_hyd(roll)
 
     #rolling 18month
@@ -772,7 +898,8 @@ def water_year(date):
         # print('not a Series/datetime/DatetimeIndex object')
         return np.nan
 
-def re_run_model_for_init(folder,  turn_off = False):
+
+def re_run_model_for_init(folder, turn_off=False):
     '''
     set model files to off/on and limit nper for re-running the model
     :param folder:
@@ -785,7 +912,7 @@ def re_run_model_for_init(folder,  turn_off = False):
     sv_nam_file = 'SVIGFM_GSP.nam'
     sv_bas6_file = 'sv_model_grid_6layers_GSP.dis'
     # Modify the sv.nam file
-    nam = os.path.join(folder, sv_nam_file )
+    nam = os.path.join(folder, sv_nam_file)
     bas = os.path.join(folder, sv_bas6_file)
 
     if turn_off:
@@ -793,7 +920,8 @@ def re_run_model_for_init(folder,  turn_off = False):
     else:
         nper = 586
 
-    print(f"\nChanging the following files for a re-run. setting turn_off=={turn_off} and nper={nper}\n\t{sv_nam_file} and \n\t{sv_bas6_file}\n")
+    print(
+        f"\nChanging the following files for a re-run. setting turn_off=={turn_off} and nper={nper}\n\t{sv_nam_file} and \n\t{sv_bas6_file}\n")
 
     with open(nam, 'r') as file:
         lines = file.readlines()
@@ -849,26 +977,36 @@ def pre_run(folder):
 
     re_run_model_for_init(folder, turn_off=False)
 
-def post_process(folder):
-    get_zone_bud(folder)
 
+def post_process(folder):
+    # todo update aws to accomodate memory needs of zone budget
+    # todo add zbud.csv to PEST.ipynb
+    # get_zone_bud(folder)
+
+    print("starting post processing\n")
     total_irr_demand(folder)
     crop_irr_depth(folder)
+    print("Done with irrigation depths\n")
     HK_extract(folder)
-
+    print("Done with HK_extract\n")
     summarize_budget(folder)
+    print("Done with summarize_budget\n")
     _ = sfr_flows_log_transform(os.path.join(folder, 'output', "kenwood_sfr.dat"),
                                 os.path.join(folder, 'output', "kenwood_sfr_reformat.csv"),
                                 station='kenwood')
+    print("Done with sfr_flows_log_transform\n")
 
     _ = sfr_flows_log_transform(os.path.join(folder, 'output', "agua_caliente_sfr.dat"),
                                 os.path.join(folder, 'output', "aguacal_sfr_reformat.csv"),
                                 station='aguacal')
 
     run_all_hyd_obs(folder)
-
+    print("Done with run_all_hyd_obs\n")
     _ = sfr_flow_accum(folder, 'kenwood')
     _ = sfr_flow_accum(folder, 'aguacal')
+    print("Done with sfr_flow_accum\n")
+
+    # sfr_processing.run(folder)
 
 
 if __name__ == '__main__':
@@ -884,9 +1022,10 @@ if __name__ == '__main__':
 
     write_kc(foldr)
     write_OFE(foldr)
-
+    print('doing pre-run twice\n')
     pre_run(foldr)
     pre_run(foldr)
+    print('Done with pre-runs\n')
 
     if pyemu.os_utils.platform.system() == 'Windows':
         print('running with windows executable')
@@ -896,3 +1035,5 @@ if __name__ == '__main__':
         pyemu.os_utils.run(r'mf-owhm.nix SVIGFM_GSP.nam')
 
     post_process(foldr)
+
+    print('DONE WITH RUN\n' * 5)
