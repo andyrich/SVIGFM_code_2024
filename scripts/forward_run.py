@@ -139,7 +139,7 @@ def set_laymult_start_values(df):
     # ['partrans', 'parval1', 'parlbnd', 'parubnd']
     parvals = dict(
         laymult_drn_k=['log', (500 * 500) * .0002, (500 * 500) * .00001, (500 * 500) * .001],
-        laymult_fmp_vk=['log', 0.0008873, 0.0001, .01, ],
+        laymult_fmp_vk=['log', 1e-2, 1e-5, 1e-1, ],
         laymult_hk1=['log', 5, 1e-5, 1000, ],
         laymult_hk2=['log', 0.005, 1e-5, 100, ],
         laymult_hk3=['log', 0.005, 1e-5, 100, ],
@@ -227,27 +227,27 @@ def get_parbounds():
 
 def get_bounds():
     '''actual paremter bounds to be enforced at time of writing arrays'''
-    bounds = dict(sy1=[0.0000001, 0.3],  # lo, hi
+    bounds = dict(sy1=[1e-4, 0.3],  # lo, hi
                   ss1=[1e-7, 0.3 / 50],
                   ss2=[1e-7, 1e-2],
                   ss3=[1e-7, 1e-2],
                   ss4=[1e-7, 1e-2],
                   ss5=[1e-7, 1e-2],
                   ss6=[1e-7, 1e-2],
-                  vk1=[1e-5, 1],
-                  vk2=[1e-5, 1],
-                  vk3=[1e-5, 1],
-                  vk4=[1e-5, 1],
-                  vk5=[1e-5, 1],
-                  vk6=[1e-5, 1],
-                  hk1=[1.1e-10, 1e3],
-                  hk2=[1.1e-10, 1e3],
-                  hk3=[1.1e-10, 1e3],
-                  hk4=[1.1e-10, 1e3],
-                  hk5=[1.1e-10, 1e3],
-                  hk6=[1.1e-10, 1e3],
-                  drn_k=[(500 * 500) * .00001, (500 * 500) * .01],
-                  fmp_vk=[0.0001, .01],
+                  vk1=[1e-4, 1],
+                  vk2=[1e-4, 1],
+                  vk3=[1e-4, 1],
+                  vk4=[1e-4, 1],
+                  vk5=[1e-4, 1],
+                  vk6=[1e-4, 1],
+                  hk1=[1.1e-7, 1e2],
+                  hk2=[1.1e-7, 1e2],
+                  hk3=[1.1e-7, 1e2],
+                  hk4=[1.1e-7, 1e2],
+                  hk5=[1.1e-7, 1e2],
+                  hk6=[1.1e-7, 1e2],
+                  drn_k=[(500 * 500) * .0001, (500 * 500) * .01],
+                  fmp_vk=[1e-6, 1e-1],
                   )
     return bounds
 
@@ -605,6 +605,9 @@ def delete_all_files_in_directory(directory_path):
 
     # Loop through all the files and directories in the specified directory
     for filename in os.listdir(directory_path):
+        if '.ins' in filename:
+            continue	
+			
         file_path = os.path.join(directory_path, filename)
         try:
             # Check if it's a file or directory and remove it accordingly
@@ -732,7 +735,35 @@ def run_all_hyd_obs(workspace):
 
     print("Done writing to files")
 
-
+def get_mean_farm_bud(foldr, subcats = True):
+    byfbyc = pd.read_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop.txt' ),  sep = '\s+')
+    byfbyc.loc[:,'DATE_START'] = pd.to_datetime(byfbyc.DATE_START).dt.year
+    subcat_farms = 81
+    
+    if subcats:
+        data = byfbyc.query(f"WBS>={subcat_farms}")
+    else:
+        data = byfbyc.query(f"WBS<{subcat_farms}")
+    # Example data (replace this with your pd.Series)
+    
+    data = data.groupby('DATE_START').sum().loc[:,[ 'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+           'ADDED_DMD_DPERC', 'ADDED_DMD_RUNOFF', 'TRAN_POT', 'ANOXIA_LOSS',
+           'SOIL_STRESS_LOSS', 'TRAN', 'TRAN_SURF_INI', 'TRAN_SURF', 'TRAN_IRR',
+           'TRAN_PRECIP', 'TRAN_GW', 'EVAP_IRR', 'EVAP_PRECIP', 'EVAP_GW',
+           'PRECIPITATION',]].loc['1970':,].mul(28/43560).mean()
+    
+    data.loc['IRR'] = data.loc['EVAP_IRR'] + data.loc['TRAN_IRR']
+    data.loc['GW'] = data.loc['EVAP_GW'] + data.loc['TRAN_GW']
+	
+    data = data.to_frame('farm_bud')
+    data.index.name = 'farm_flux'
+	
+    if subcats:
+        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_subcat.csv' ))
+    else:
+        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_not_subcat.csv' ))
+	
+	
 def get_zone_bud(workspace):
     '''
     process zone budget of sv modflow output
@@ -898,6 +929,19 @@ def water_year(date):
         # print('not a Series/datetime/DatetimeIndex object')
         return np.nan
 
+def copy_original_heads(folder):
+    '''
+    ensure all models start from same starting heads
+    '''
+    dest = os.path.join(folder,'init_heads')
+    sources = os.path.join(dest, r'base_heads_for_rerunning')
+
+    for i in range(6):
+        source_file = os.path.join(sources, f"init_heads_lay{i + 1}.dat")
+        dest_file = os.path.join(dest, f"init_heads_lay{i + 1}.dat")
+        shutil.copyfile(source_file, dest_file)
+
+    print(f"done copying initial heads from {sources} to {dest}")
 
 def re_run_model_for_init(folder, turn_off=False):
     '''
@@ -955,6 +999,7 @@ def re_run_model_for_init(folder, turn_off=False):
 
 
 def pre_run(folder):
+    copy_original_heads(folder)
     re_run_model_for_init(folder, turn_off=True)
 
     if pyemu.os_utils.platform.system() == 'Windows':
@@ -986,6 +1031,8 @@ def post_process(folder):
     print("starting post processing\n")
     total_irr_demand(folder)
     crop_irr_depth(folder)
+    get_mean_farm_bud(folder, subcats = True)
+    get_mean_farm_bud(folder, subcats = False)
     print("Done with irrigation depths\n")
     HK_extract(folder)
     print("Done with HK_extract\n")
