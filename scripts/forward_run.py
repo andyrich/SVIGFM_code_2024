@@ -94,7 +94,7 @@ def set_zoneentire_start_values(df):
 
 def set_zonemult_start_values(df):
     parvals = dict(
-        zonemult_hk1_eastside=10.0,
+        zonemult_hk1_eastside=1.0,
         zonemult_hk2_eastside=1.0,
         zonemult_hk3_eastside=1.0,
         zonemult_hk4_eastside=1.0,
@@ -139,7 +139,7 @@ def set_laymult_start_values(df):
     # ['partrans', 'parval1', 'parlbnd', 'parubnd']
     parvals = dict(
         laymult_drn_k=['log', (500 * 500) * .0002, (500 * 500) * .00001, (500 * 500) * .001],
-        laymult_fmp_vk=['log', 1e-2, 1e-5, 1e-1, ],
+        laymult_fmp_vk=['log', 0.75e-2, 1e-5, 1e-1, ],
         laymult_hk1=['log', 5, 1e-5, 1000, ],
         laymult_hk2=['log', 0.005, 1e-5, 100, ],
         laymult_hk3=['log', 0.005, 1e-5, 100, ],
