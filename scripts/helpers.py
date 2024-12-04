@@ -87,7 +87,7 @@ def get_sr():
     return sr
     
 
-def make_plot(name,x,y, i=None, j=None, geom = None):
+def make_plot(name,x,y, i=None, j=None, geom = None, return_plot_ax = False):
     '''make a hydrograph plot'''
     
     fig = plt.figure(figsize = (10,6))
@@ -114,8 +114,12 @@ def make_plot(name,x,y, i=None, j=None, geom = None):
     else:
         pt = gpd.GeoSeries(Point(x, y), crs = 2226)   
         
-    pt.plot(ax = ax3,  markersize = 40,marker = '*', color = 'r') 
-    return fig, ax
+    pt.plot(ax = ax3,  markersize = 40,marker = '*', color = 'r')
+
+    if return_plot_ax:
+        return fig, ax, ax3
+    else:
+        return fig, ax
 
 def get_zones(ml):
     from shapely import Polygon
