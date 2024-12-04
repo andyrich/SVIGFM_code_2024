@@ -44,7 +44,7 @@ def set_zoneentire_start_values(df):
         zoneentire_hk_bay=['log', 1, 0.001, 1000],
         zoneentire_hk_cityson=['log', 0.1, 0.001, 1000],  # not equal to 1
         zoneentire_hk_eastside=['log', 0.001, 0.001, 1000],  # not equal to 1
-        zoneentire_hk_highlands=['log', 0.1, 0.001, 1000],  # not equal to 1
+        zoneentire_hk_highlands=['log', 0.01, 0.001, 1000],  # not equal to 1
         zoneentire_hk_kenwood=['log', 1, 0.001, 1000],
         zoneentire_hk_southcent=['log', 1.0, 0.001, 1000],
         zoneentire_hk_vom=['log', 1, 0.001, 1000],
@@ -139,8 +139,8 @@ def set_laymult_start_values(df):
     # ['partrans', 'parval1', 'parlbnd', 'parubnd']
     parvals = dict(
         laymult_drn_k=['log', (500 * 500) * .0002, (500 * 500) * .00001, (500 * 500) * .001],
-        laymult_fmp_vk=['log', 1e-3, 1e-5, 1e-1, ],
-        laymult_hk1=['log', 5, 1e-5, 1000, ],
+        laymult_fmp_vk=['log', 0.8e-2, 1e-5, 1e-1, ],
+        laymult_hk1=['log', 1, 1e-5, 1000, ],
         laymult_hk2=['log', 0.005, 1e-5, 100, ],
         laymult_hk3=['log', 0.005, 1e-5, 100, ],
         laymult_hk4=['log', .1, 1e-5, 100, ],
