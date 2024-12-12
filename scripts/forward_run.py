@@ -153,12 +153,12 @@ def set_laymult_start_values(df):
         laymult_ss5=['log', 5e-6, 1e-6, 1e-3, ],
         laymult_ss6=['log', 5e-6, 1e-6, 1e-3, ],
         laymult_sy1=['fixed', 0.3, .005, 1, ],
-        laymult_vk1=['log', 0.1, 1e-3, 1e-1, ],
-        laymult_vk2=['log', 1e-2, 1e-3, 1e-1, ],
-        laymult_vk3=['log', 1e-2, 1e-3, 1e-1, ],
-        laymult_vk4=['log', 1e-2, 1e-3, 1e-1, ],
-        laymult_vk5=['log', 1e-2, 1e-3, 1e-1, ],
-        laymult_vk6=['log', 1e-2, 1e-3, 1e-1, ],
+        laymult_vk1=['log', 1, 10, 1000],
+        laymult_vk2=['log', 1, 100, 1000],
+        laymult_vk3=['log', 1, 100, 1000],
+        laymult_vk4=['log', 1, 100, 1000],
+        laymult_vk5=['log', 1, 100, 1000],
+        laymult_vk6=['log', 1, 100, 1000],
 
         # laymult_hk=[1e-5, 1000, 1.],
         # laymult_vk=[1e-3, 1e-1, 1.],
@@ -210,15 +210,14 @@ def get_zone_bounds():
 
 def get_parbounds():
     '''parameter bounds for OTHER parameters'''
-    parbounds = dict(sfr=[1e-9, 1000, 1e-2],  # lo, hi, initial values
+    parbounds = dict(sfr=[1e-9, 1, 1e-5],  # lo, hi, initial values
                      fieswp=[0.5, 0.999, 0.7],
-
-                     hfb=[0.000001, 1000000, 1000],
+                     hfb=[0.000001, 10000, 1000],
                      fmp_kc=[1 / 1.3, 1.3, 1.0],  # individual kc multipliers
                      fmp_ofe=[0.5, 1.0, 0.7, ],  # individual OFE values. vineyards are set in PEST.ipynb at 0.95
                      fmp_sfac=[1 / 1.3, 1.3, 1.0],  # multiplier for crop kc
                      rurfac=[.8, 1.25, 1.0],
-                     ghbk=[0.0001, 10000, 1.4E-02],
+                     ghbk=[0.0001, 10, 1.4E-02],
 
                      )  # all sfac/kc multipliers
 
@@ -234,12 +233,12 @@ def get_bounds():
                   ss4=[1e-7, 1e-2],
                   ss5=[1e-7, 1e-2],
                   ss6=[1e-7, 1e-2],
-                  vk1=[1e-4, 1],
-                  vk2=[1e-4, 1],
-                  vk3=[1e-4, 1],
-                  vk4=[1e-4, 1],
-                  vk5=[1e-4, 1],
-                  vk6=[1e-4, 1],
+                  vk1=[1, 1000],
+                  vk2=[1, 1000],
+                  vk3=[1, 1000],
+                  vk4=[1, 1000],
+                  vk5=[1, 1000],
+                  vk6=[1, 1000],
                   hk1=[1.1e-7, 1e2],
                   hk2=[1.1e-7, 1e2],
                   hk3=[1.1e-7, 1e2],
@@ -606,8 +605,8 @@ def delete_all_files_in_directory(directory_path):
     # Loop through all the files and directories in the specified directory
     for filename in os.listdir(directory_path):
         if '.ins' in filename:
-            continue	
-			
+            continue
+
         file_path = os.path.join(directory_path, filename)
         try:
             # Check if it's a file or directory and remove it accordingly
@@ -735,35 +734,37 @@ def run_all_hyd_obs(workspace):
 
     print("Done writing to files")
 
-def get_mean_farm_bud(foldr, subcats = True):
-    byfbyc = pd.read_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop.txt' ),  sep = '\s+')
-    byfbyc.loc[:,'DATE_START'] = pd.to_datetime(byfbyc.DATE_START).dt.year
+
+def get_mean_farm_bud(foldr, subcats=True):
+    byfbyc = pd.read_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop.txt'), sep='\s+')
+    byfbyc.loc[:, 'DATE_START'] = pd.to_datetime(byfbyc.DATE_START).dt.year
     subcat_farms = 81
-    
+
     if subcats:
         data = byfbyc.query(f"WBS>={subcat_farms}")
     else:
         data = byfbyc.query(f"WBS<{subcat_farms}")
     # Example data (replace this with your pd.Series)
-    
-    data = data.groupby('DATE_START').sum().loc[:,[ 'TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
-           'ADDED_DMD_DPERC', 'ADDED_DMD_RUNOFF', 'TRAN_POT', 'ANOXIA_LOSS',
-           'SOIL_STRESS_LOSS', 'TRAN', 'TRAN_SURF_INI', 'TRAN_SURF', 'TRAN_IRR',
-           'TRAN_PRECIP', 'TRAN_GW', 'EVAP_IRR', 'EVAP_PRECIP', 'EVAP_GW',
-           'PRECIPITATION',]].loc['1970':,].mul(28/43560).mean()
-    
+
+    data = data.groupby('DATE_START').sum().loc[:, ['TOT_DEEP_PERC', 'TOT_SURF_RUNOFF',
+                                                    'ADDED_DMD_DPERC', 'ADDED_DMD_RUNOFF', 'TRAN_POT', 'ANOXIA_LOSS',
+                                                    'SOIL_STRESS_LOSS', 'TRAN', 'TRAN_SURF_INI', 'TRAN_SURF',
+                                                    'TRAN_IRR',
+                                                    'TRAN_PRECIP', 'TRAN_GW', 'EVAP_IRR', 'EVAP_PRECIP', 'EVAP_GW',
+                                                    'PRECIPITATION', ]].loc['1970':, ].mul(28 / 43560).mean()
+
     data.loc['IRR'] = data.loc['EVAP_IRR'] + data.loc['TRAN_IRR']
     data.loc['GW'] = data.loc['EVAP_GW'] + data.loc['TRAN_GW']
-	
+
     data = data.to_frame('farm_bud')
     data.index.name = 'farm_flux'
-	
+
     if subcats:
-        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_subcat.csv' ))
+        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_subcat.csv'))
     else:
-        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_not_subcat.csv' ))
-	
-	
+        data.to_csv(os.path.join(foldr, 'output', 'ByFarm_ByCrop_not_subcat.csv'))
+
+
 def get_zone_bud(workspace):
     '''
     process zone budget of sv modflow output
@@ -929,11 +930,12 @@ def water_year(date):
         # print('not a Series/datetime/DatetimeIndex object')
         return np.nan
 
+
 def copy_original_heads(folder):
     '''
     ensure all models start from same starting heads
     '''
-    dest = os.path.join(folder,'init_heads')
+    dest = os.path.join(folder, 'init_heads')
     sources = os.path.join(dest, r'base_heads_for_rerunning')
 
     for i in range(6):
@@ -942,6 +944,7 @@ def copy_original_heads(folder):
         shutil.copyfile(source_file, dest_file)
 
     print(f"done copying initial heads from {sources} to {dest}")
+
 
 def re_run_model_for_init(folder, turn_off=False):
     '''
@@ -1031,8 +1034,8 @@ def post_process(folder):
     print("starting post processing\n")
     total_irr_demand(folder)
     crop_irr_depth(folder)
-    get_mean_farm_bud(folder, subcats = True)
-    get_mean_farm_bud(folder, subcats = False)
+    get_mean_farm_bud(folder, subcats=True)
+    get_mean_farm_bud(folder, subcats=False)
     print("Done with irrigation depths\n")
     HK_extract(folder)
     print("Done with HK_extract\n")
@@ -1069,10 +1072,10 @@ if __name__ == '__main__':
 
     write_kc(foldr)
     write_OFE(foldr)
-    print('doing pre-run twice\n')
+    print('\ndoing pre-run twice\n')
     pre_run(foldr)
     pre_run(foldr)
-    print('Done with pre-runs\n')
+    print('\nDone with pre-runs\n')
 
     if pyemu.os_utils.platform.system() == 'Windows':
         print('running with windows executable')
