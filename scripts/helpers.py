@@ -25,6 +25,46 @@ from pyemu.pst.pst_utils import (
 )
 
 
+def set_obs_to_zero_for_manually_selected_obs(pst):
+    '''set observations in the pest obs file form the welldetails to zero-weight'''
+    main = os.path.join("HOB_Creation", "WellDetails_20240911.xlsx")
+    info = pd.read_excel(main, sheet_name="FinalForHOB")
+    info.loc[:, 'station'] = info.loc[:, 'station_name'].str.lower()
+
+    obs = pst.observation_data.copy()
+
+    gwle = obs.obsnme.str.contains('gwle') | obs.obsnme.str.contains('maj') | obs.obsnme.str.contains('ddown')
+    hobs = obs.obsnme.str.contains('hds_')
+    ren = lambda x: x.split("_date:")[0].split(":")[-1] if 'hds' in x or 'gwle' in x else ''
+    station = obs.obsnme.apply(ren)
+
+    print(f"number of observations before filtering {obs.query('weight>0').shape[0]}\n")
+    # print(f"number of hobs stations {obs.loc[hobs].station.nunique()}")
+    print(f"number of hobs stations before filtering  {obs.loc[hobs & obs.weight > 0].observationname.nunique()}")
+    # set stations with HOBS zero weight
+    c = station.isin(info.loc[info.HOBS_zero_weight == 1].station) & hobs
+    obs.loc[c, 'weight'] = 0
+    print(
+        f"number of hobs stations after filtering  for HOBS_zero_weight {obs.loc[hobs & obs.weight > 0].observationname.nunique()}")
+    print(f"number of observations after filtering for HOBS_zero_weight {obs.query('weight>0').shape[0]}\n")
+
+    # print(obs.query("weight>0").shape[0])
+    # set stations wight GWLE to zero weight
+    print(
+        f"number of gwle stations before filtering  for ALL_GWLE_zero_weight {obs.loc[gwle & obs.weight > 0].station.nunique()}")
+    c = station.isin(info.loc[info.ALL_GWLE_zero_weight == 1].station) & gwle
+    obs.loc[c, 'weight'] = 0
+    print(
+        f"number of gwle stations after filtering for ALL_GWLE_zero_weight {obs.loc[gwle & obs.weight > 0].station.nunique()}")
+    print(f"number of observations after filtering for ALL_GWLE_zero_weight {obs.query('weight>0').shape[0]}\n")
+
+    print(f"number of stations with HOBS_zero_weight in info: {info.HOBS_zero_weight.sum()} ")
+    print(f"number of stations with ALL_GWLE_zero_weight in info: {info.ALL_GWLE_zero_weight.sum()} ")
+
+
+    return obs
+
+
 def modflow_hob_to_instruction_file(hob_file, ins_file=None):
     """write an instruction file for a modflow head observation file
 
@@ -180,12 +220,66 @@ def offset(xul, yul, delr, delc, angrot=0):
 
     return xnew, ynew
 
+
 def get_info_sheet(ml):
-    main = r"C:\GSP\sv\model\update_2024\scripts\HOB_Creation\WellDetails_20240911.xlsx"
-    df = pd.read_excel(main)
+    '''combine the well details from M&A  with zones and GWLE station info. add geometry, x/y etc'''
+    # main = r"C:\GSP\sv\model\update_2024\scripts\HOB_Creation\WellDetails_20240911.xlsx"
+    main = os.path.join("HOB_Creation","WellDetails_20240911.xlsx")
+    df = pd.read_excel(main, sheet_name="All_Final")
+    print(df.shape)
+
+    info = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Easting_x, df.Northing_y), crs=2226)
+    info.loc[:, 'station'] = info.loc[:, 'station_name'].str.lower()
+
+    stats = pd.read_csv(os.path.join('..', 'waterlevel', 'GWLE', 'gwle_station_info.csv'), index_col=0).loc[:,
+            ['Station Name', 'Depth', 'num_meas']]
+    stats.loc[:, 'station'] = stats.loc[:, 'Station Name'].str.lower()
+    stats = stats.drop(columns='Station Name')
+    stats.loc[:, 'GWLE'] = True
+
+    info = pd.merge(info, stats, on='station')
+    info.loc[:, 'GWLE'] = info.loc[:, 'GWLE'].fillna(False)
+
+    info = info.drop(columns=['TOS_1', 'BOS_1',
+                              'TOS_2', 'BOS_2', 'TOS_3', 'BOS_3', 'TOS_4', 'BOS_4', 'TOS_5', 'BOS_5',
+                              'TOS_6', 'BOS_6', 'TOS_7', 'BOS_7', 'TOS_8', 'BOS_8', 'x_coordinate', 'y_coordinate',
+                              'Coordinate_Source.1',
+                              'Suggest Inclusion in future update?', 'Layer_Total ', 'Map_Label', 'Row',
+                              'Col', 'Node', 'RowCol',
+                              ], errors='raise')
+
+    other_info = pd.read_csv(os.path.join('..', 'waterlevel', 'stats.csv'), index_col=0)
+    other_info.loc[:, 'station'] = other_info.loc[:, 'station_name'].str.lower()
+    other_info = gpd.GeoDataFrame(other_info,
+                                  geometry=gpd.points_from_xy(other_info.station_longitude, other_info.station_latitude,
+                                                              crs=4326), ).to_crs(2226)
+
+    # other_info.loc[:,'Easting'] = other_info.geometry.x
+    # other_info.loc[:,'Northing'] = other_info.geometry.y
+    other_info = other_info.loc[~other_info.loc[:, 'station'].isin(info.loc[:, 'station'])]
+    other_info = other_info.loc[:, ['station', 'geometry']]
+
+    info = pd.concat([info, other_info])
 
     zones = get_zones(ml)
+    zones = zones.drop(columns=['zone']).rename(columns={'name': 'zone'})
+    # zones.loc[:,'station'] = zones.loc[:,'station_name'].str.lower()
+    info = gpd.sjoin(info, zones.loc[:, ['zone', 'geometry']], how='left').drop(
+        columns=['index_right', 'station_no', 'GRID_ID ', 'station_name', 'Easting_x', 'Northing_y'])
+    # info = info.rename(columns = {'Include?':'HOBS'})
+    info.loc[:, 'HOBS'] = info.loc[:, 'Include?'] == 1
+    info = info.drop(columns='Include?')
+    info.loc[:, 'num_meas'] = info.loc[:, 'num_meas'].fillna(0)
+    info.loc[:, 'Depth'] = info.loc[:, 'Depth'].fillna('Unknown')
 
-    zones = gpd.sjoin(df, zones.loc[:,['zone','geometry']])
+    c = info.RMP
+    info = info.drop(columns='RMP')
+    info.loc[:, 'RMP'] = c == 'Y'
+    # Rearrange columns
+    new_order = info.columns[-7:].tolist() + info.columns[:-7].tolist()
+    info = info[new_order]
 
-    return zones
+    info.loc[:, 'Easting'] = info.geometry.x
+    info.loc[:, 'Northing'] = info.geometry.y
+
+    return info
