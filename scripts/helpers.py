@@ -179,3 +179,13 @@ def offset(xul, yul, delr, delc, angrot=0):
     ynew = yul - yoff
 
     return xnew, ynew
+
+def get_info_sheet(ml):
+    main = r"C:\GSP\sv\model\update_2024\scripts\HOB_Creation\WellDetails_20240911.xlsx"
+    df = pd.read_excel(main)
+
+    zones = get_zones(ml)
+
+    zones = gpd.sjoin(df, zones.loc[:,['zone','geometry']])
+
+    return zones
