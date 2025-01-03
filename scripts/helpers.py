@@ -26,7 +26,12 @@ from pyemu.pst.pst_utils import (
 
 
 def set_obs_to_zero_for_manually_selected_obs(pst):
-    '''set observations in the pest obs file form the welldetails to zero-weight'''
+    '''
+    set observations in the pest obs file form the welldetails to zero-weight
+    :param pst:
+    :return: pst.observation_data
+    '''
+
     main = os.path.join("HOB_Creation", "WellDetails_20240911.xlsx")
     info = pd.read_excel(main, sheet_name="FinalForHOB")
     info.loc[:, 'station'] = info.loc[:, 'station_name'].str.lower()
@@ -61,6 +66,14 @@ def set_obs_to_zero_for_manually_selected_obs(pst):
     print(f"number of stations with HOBS_zero_weight in info: {info.HOBS_zero_weight.sum()} ")
     print(f"number of stations with ALL_GWLE_zero_weight in info: {info.ALL_GWLE_zero_weight.sum()} ")
 
+    print("filtering GWLE before 2010")
+    print(
+        f"number of gwle stations before filtering for gwle<2010 {obs.loc[gwle & obs.weight > 0].shape[0]}")
+    # set gwle before 2010 to zero:
+    date = pd.to_datetime(obs.date)
+    obs.loc[gwle & (date.dt.year < 2010), 'weight'] = 0
+    print(
+        f"number of gwle stations after filtering for gwle<2010 {obs.loc[gwle & obs.weight > 0].shape[0]}")
 
     return obs
 
